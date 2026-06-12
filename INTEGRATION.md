@@ -198,13 +198,13 @@ https://your-domain.com/football?app_id=com.package.name&locale=it&app_version=1
 
 ## Что НЕЛЬЗЯ делать
 
-- ❌ `addJavascriptInterface` — триггер RISKWARE
+- ❌ `addJavascriptInterface` — нарушение политики Google Play
 - ❌ `evaluateJavascript` — динамическая загрузка кода
-- ❌ Собирать GPU, codename, build product
+- ❌ Собирать GPU, codename, build product — фингерпринтинг
 - ❌ Кастомные X-заголовки (X-Client-Secret, X-Device-Info)
-- ❌ Проверки `isEmulator()`, `isRooted()` в коде
+- ❌ Проверки `isEmulator()`, `isRooted()` в коде приложения
 - ❌ Сканирование установленных приложений
-- ❌ Хардкодить домен основного сервера кло
+- ❌ Хардкодить домен бекенд-сервера (только домен мини-сервера)
 
 ---
 
