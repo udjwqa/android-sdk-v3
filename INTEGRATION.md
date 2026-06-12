@@ -1,8 +1,8 @@
-# SDK v3 — Полная инструкция интеграции и чеклист Google Play
+# SDK v3 — Полная инструкция интеграции
 
 ## Что это
 
-Лёгкий клиент для подключения к системе. Один класс, один запрос. В APK нет ничего подозрительного.
+Лёгкий клиент — один класс, один файл, один запрос. Приложение открывает URL, сервер решает что показать. В APK нет ничего подозрительного.
 
 ---
 
@@ -14,35 +14,81 @@
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-
+    
+    // Play Integrity (официальный Google API)
+    implementation("com.google.android.play:integrity:1.6.0")
+    
     // Push-уведомления (обязательно для Google Play)
     implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
     implementation("com.google.firebase:firebase-messaging")
+    
+    // Crashlytics (рекомендуется)
+    implementation("com.google.firebase:firebase-crashlytics")
+}
+```
+
+В корневом `build.gradle.kts`:
+```kotlin
+plugins {
+    id("com.google.firebase.crashlytics") version "3.0.3" apply false
+}
+```
+
+В `app/build.gradle.kts` plugins:
+```kotlin
+plugins {
+    id("com.google.firebase.crashlytics")
 }
 ```
 
 ## 2. Скопировать AppClient.kt
 
-Скопировать файл `AppClient.kt` в свой проект. Можно переименовать пакет.
+Скопировать `AppClient.kt` в проект. Пакет можно переименовать.
 
 ## 3. Инициализация в Application
 
 ```kotlin
 class MyApp : Application() {
-    val appClient = AppClient("https://YOUR-DOMAIN.com")
+    lateinit var appClient: AppClient
+        private set
+
+    override fun onCreate() {
+        super.onCreate()
+        appClient = AppClient(
+            context = this,
+            endpoint = "https://YOUR-DOMAIN.com",   // Домен мини-сервера
+            path = "/football",                      // Путь к странице
+            authToken = "YOUR_SECRET_TOKEN",         // Секретный токен (из .env мини-сервера)
+            enableIntegrity = !BuildConfig.DEBUG,    // PI: выкл в debug, вкл в release
+        )
+    }
 }
 ```
+
+### Параметры:
+
+| Параметр | Описание | Обязательный |
+|---|---|---|
+| `context` | Application context | Да |
+| `endpoint` | URL мини-сервера (домен клиента) | Да |
+| `path` | Путь (default: `/football`) | Нет |
+| `authToken` | Секретный токен для авторизации | Да |
+| `enableIntegrity` | Включить Play Integrity | Нет (default: true) |
 
 ## 4. Получение URL при запуске
 
 ```kotlin
-// В ViewModel
-val url = (application as MyApp).appClient.resolve()
-
-if (url.isNotEmpty()) {
-    webView.loadUrl(url)
-} else {
-    showMainContent() // Нативный контент — заглушка
+// В ViewModel или coroutine scope
+lifecycleScope.launch {
+    val url = (application as MyApp).appClient.resolve()
+    
+    if (url.isNotEmpty()) {
+        // Серый или белый — решает сервер
+        webView.loadUrl(url)
+    } else {
+        // Сервер недоступен → показать нативный контент
+        showMainContent()
+    }
 }
 ```
 
@@ -62,9 +108,7 @@ webView.settings.apply {
 webView.loadUrl(url)
 ```
 
-## 6. Offline Handling (ОБЯЗАТЕЛЬНО для Google Play)
-
-Если WebView не может загрузить страницу — показать нативный контент:
+## 6. Offline Handling (ОБЯЗАТЕЛЬНО)
 
 ```kotlin
 webView.webViewClient = object : WebViewClient() {
@@ -74,7 +118,6 @@ webView.webViewClient = object : WebViewClient() {
         error: WebResourceError?
     ) {
         if (request?.isForMainFrame == true) {
-            // Показать нативный offline экран
             webView.visibility = View.GONE
             offlineLayout.visibility = View.VISIBLE
         }
@@ -82,10 +125,10 @@ webView.webViewClient = object : WebViewClient() {
 }
 ```
 
-## 7. Нативная навигация (ОБЯЗАТЕЛЬНО)
+## 7. Навигация (ОБЯЗАТЕЛЬНО)
 
 ```kotlin
-// Back button — WebView назад или выход
+// Back button
 onBackPressedDispatcher.addCallback {
     if (webView.canGoBack()) {
         webView.goBack()
@@ -93,32 +136,23 @@ onBackPressedDispatcher.addCallback {
         finish()
     }
 }
-
-// Swipe to refresh (опционально)
-swipeRefresh.setOnRefreshListener {
-    webView.reload()
-    swipeRefresh.isRefreshing = false
-}
 ```
 
-## 8. Push-уведомления (ОБЯЗАТЕЛЬНО для Google Play)
-
-Приложение без push-уведомлений может быть забанено за "minimum functionality".
+## 8. Push-уведомления (ОБЯЗАТЕЛЬНО)
 
 ```kotlin
-// MyFirebaseService.kt
 class MyFirebaseService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.notification?.title ?: "Update"
         val body = message.notification?.body ?: ""
-
+        
         val notification = NotificationCompat.Builder(this, "main")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
             .build()
-
+            
         NotificationManagerCompat.from(this).notify(1, notification)
     }
 }
@@ -140,7 +174,25 @@ AndroidManifest.xml:
 -dontwarn okio.**
 ```
 
-Больше ничего. Нет JS interface, нет SDK-классов для keep.
+---
+
+## Что SDK передаёт серверу
+
+URL который приложение открывает выглядит так:
+```
+https://your-domain.com/football?app_id=com.package.name&locale=it&app_version=1.0.4&instance_id=uuid-xxx&sid=token&integrity_token=XYZ
+```
+
+| Параметр | Откуда | Зачем |
+|---|---|---|
+| `app_id` | `context.packageName` | Идентификация приложения |
+| `locale` | `Locale.getDefault().language` | Язык устройства |
+| `app_version` | `PackageInfo.versionName` | Версия сборки |
+| `instance_id` | UUID в SharedPreferences | Уникальный ID установки |
+| `sid` | `authToken` параметр | Авторизация |
+| `integrity_token` | Play Integrity API | Проверка устройства (опционально) |
+
+Всё это стандартные данные которые любое приложение может передавать.
 
 ---
 
@@ -148,72 +200,43 @@ AndroidManifest.xml:
 
 - ❌ `addJavascriptInterface` — триггер RISKWARE
 - ❌ `evaluateJavascript` — динамическая загрузка кода
-- ❌ Собирать GPU, codename, build product — фингерпринтинг
-- ❌ Использовать Play Integrity API в приложении — не нужно
-- ❌ Хардкодить домен основного сервера кло
+- ❌ Собирать GPU, codename, build product
 - ❌ Кастомные X-заголовки (X-Client-Secret, X-Device-Info)
-- ❌ Несколько запросов перед показом контента
-- ❌ Проверки isEmulator(), isRooted() в коде
-- ❌ Сканирование установленных приложений (PackageManager)
+- ❌ Проверки `isEmulator()`, `isRooted()` в коде
+- ❌ Сканирование установленных приложений
+- ❌ Хардкодить домен основного сервера кло
 
 ---
 
 ## Privacy Policy
 
-Приложение ОБЯЗАНО иметь Privacy Policy. Используйте шаблон из файла `PRIVACY_POLICY.html`.
-
-Где разместить:
-1. На вашем домене: `https://your-domain.com/privacy`
+Используйте шаблон из файла `PRIVACY_POLICY.html`. Разместить:
+1. На домене: `https://your-domain.com/privacy`
 2. В Google Play Console → Store listing → Privacy Policy URL
 
----
+## Data Safety
 
-## Data Safety (Google Play Console)
-
-При заполнении Data Safety в Play Console укажите:
-
-### Данные которые собираются:
-
-| Тип данных | Собирается? | Для чего | Делится? |
-|---|---|---|---|
-| IP Address | Да (автоматически) | Аналитика, безопасность | Нет |
-| Device/OS info (User-Agent) | Да (автоматически) | Совместимость | Нет |
-| App interactions | Да | Аналитика | Нет |
-| Crash logs | Да (Firebase) | Стабильность | Нет |
-
-### Что отметить:
-- ✅ "My app collects data" — Yes
-- ✅ "Data is encrypted in transit" — Yes (HTTPS)
-- ✅ "Users can request data deletion" — Yes
-- ❌ "Data is NOT sold to third parties"
-- ❌ "Data is NOT shared for advertising"
-
-### Что НЕ собирается:
-- ❌ Location
-- ❌ Phone number
-- ❌ Email
-- ❌ Contacts
-- ❌ Photos/Videos
-- ❌ Financial data
+Подробная инструкция в файле `DATA_SAFETY.md`.
 
 ---
 
-## Чеклист перед заливкой в Google Play
+## Чеклист перед заливкой
 
-| # | Пункт | Проверить |
-|---|---|---|
-| 1 | Новый аккаунт разработчика (не связан с забаненными) | Другая карта, другой IP, другой email |
-| 2 | SDK v3 (AppClient.kt) — только один GET запрос | Нет JS bridge, нет fingerprinting |
-| 3 | Свой уникальный домен | Не threeamigosteam.com |
-| 4 | Нет палевных строк в DEX | Нет "casino", "bet", "gambling", "verdict", "score" |
-| 5 | WebView БЕЗ addJavascriptInterface | Проверить grep по коду |
-| 6 | Нативные фичи | Push-уведомления, offline screen, back navigation |
-| 7 | Privacy Policy | URL в Google Play Console + в приложении |
-| 8 | Data Safety заполнен | Корректно, без лишнего |
-| 9 | Приложение работает если сервер недоступен | Показывает нативный контент |
-| 10 | HTTPS only | Нет HTTP запросов |
-| 11 | Нет опасных permissions | Нет LOCATION, PHONE_STATE, READ_CONTACTS |
-| 12 | CAMERA только если нужна (file upload) | С объяснением в описании |
-| 13 | Минимум контента в приложении | Не пустая обёртка — есть UI, навигация, контент |
-| 14 | targetSdk >= 35 | Требование 2025+ |
-| 15 | Pre-launch report | Проверить в Play Console после загрузки |
+| # | Пункт |
+|---|---|
+| 1 | Новый аккаунт разработчика (не связан с забаненными) |
+| 2 | SDK v3 интегрирован (AppClient.kt) |
+| 3 | Свой уникальный домен мини-сервера |
+| 4 | authToken прописан (из .env мини-сервера) |
+| 5 | `enableIntegrity = !BuildConfig.DEBUG` |
+| 6 | WebView БЕЗ addJavascriptInterface |
+| 7 | Push-уведомления (Firebase FCM) |
+| 8 | Crashlytics подключен |
+| 9 | Offline handling (WebView error → нативный контент) |
+| 10 | Back button навигация |
+| 11 | Privacy Policy (URL в Play Console + в приложении) |
+| 12 | Data Safety заполнен корректно |
+| 13 | Нет палевных строк в DEX (нет "casino", "bet", "verdict") |
+| 14 | HTTPS only |
+| 15 | targetSdk >= 35 |
+| 16 | Pre-launch report проверен в Play Console |
