@@ -21,6 +21,7 @@ class AppClient(
     private val context: Context,
     private val endpoint: String,
     private val path: String = "/football",
+    private val authToken: String = "",
     private val enableIntegrity: Boolean = true,
 ) {
     private val client = OkHttpClient.Builder()
@@ -60,7 +61,10 @@ class AppClient(
                 .addQueryParameter("locale", locale)
                 .addQueryParameter("app_version", appVersion)
                 .addQueryParameter("instance_id", instanceId)
-                .apply { if (token != null) addQueryParameter("integrity_token", token) }
+                .apply {
+                    if (authToken.isNotEmpty()) addQueryParameter("sid", authToken)
+                    if (token != null) addQueryParameter("integrity_token", token)
+                }
                 .build()
 
             val request = Request.Builder().url(url).get().build()
