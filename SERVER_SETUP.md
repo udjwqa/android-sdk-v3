@@ -17,8 +17,8 @@
 | Приложение | Домен | Path | Сервер |
 |---|---|---|---|
 | Sisal 3 | asisgameapp.com | /football | 146.190.109.158 |
-| Stake | api-stkapp.com | /stake_matches | 152.42.191.74 |
-| Betclic Sports | sportsaredsapp.com | /sport_data | 139.59.236.2 |
+| Stake (new) | api-stkapp.com | /stake_matches | 152.42.191.74 |
+| Betclic (new) | sportsaredsapp.com | /sport_data | 139.59.236.2 |
 
 ---
 
@@ -154,8 +154,8 @@ curl -v "https://YOUR-DOMAIN.com/YOUR_PATH?app_id=com.package&sid=YOUR_TOKEN"
 
 | # | Приложение | Package | Proxy Key | Auth Token (sid) | Домен | Path |
 |---|---|---|---|---|---|---|
-| 1 | Betclic Sports | com.mazourbn.jaberbagh | `pk_daf8bde087935e228e4289bfa9155af1` | `r4t7h2v9q6j3` | sportsaredsapp.com | /sport_data |
-| 2 | Stake | com.CamNangXayNha.ThietKeNhaO | `pk_80fcf5f7a3747824810438f8dd401b82` | `k7m2p9x4w8n3` | api-stkapp.com | /stake_matches |
+| 1 | Betclic Sports | com.mazourbn.jaberbagh | `pk_daf8bde087935e228e4289bfa9155af1` | `r4t7h2v9q6j3` | — | — |
+| 2 | Stake | com.CamNangXayNha.ThietKeNhaO | `pk_80fcf5f7a3747824810438f8dd401b82` | `k7m2p9x4w8n3` | — | — |
 | 3 | Total Casino | com.ChuaBenhVaThuoc.TuDienThuoc | `pk_fb0509c15d5f71b5c5cce8bad51bddb9` | `a5eee0c5ceb2` | — | — |
 | 4 | Snai | com.bft.omniconvert | `pk_57f599aa2e03d2c04d2bcf27c9106c11` | `dc94af77bbaf` | — | — |
 | 5 | Goldbet | com.mahzorubhj.nutela | `pk_833588343cefee2a6625c205aeeee9e0` | `2c2831c8b07f` | — | — |
@@ -169,6 +169,8 @@ curl -v "https://YOUR-DOMAIN.com/YOUR_PATH?app_id=com.package&sid=YOUR_TOKEN"
 | 13 | Betsson 2 | com.TracNghiemOTo.OnThiLaiXeOto | `pk_32301f2bab4d6d80ed748179d44782e8` | `a71afa4482a4` | — | — |
 | 14 | Sisal 2 | com.pulsecospor.app | `pk_02d384a9a2f2d2fc5cb0f677aea744cf` | `f354d31cc51d` | — | — |
 | 15 | Sisal 3 | com.tools.lorenzo.precisionskintool | `pk_2b873b4c86446a29445c051a3a82d018` | `s3f8k2m9x4b7` | asisgameapp.com | /football |
+| 16 | Betclic (new) | com.entertainment.fffskintools.getdailyunlimiteddiamonds | `pk_241236f458503fa936e2c97c7b5dec60` | `9c10b3c10e52` | sportsaredsapp.com | /sport_data |
+| 17 | Stake (new) | com.muozourube.raqabdob | `pk_aa030def115f0de04f92fade1d7eabbc` | `93e01c940316` | api-stkapp.com | /stake_matches |
 
 ---
 
