@@ -92,7 +92,18 @@ lifecycleScope.launch {
 }
 ```
 
-## 5. WebView настройки
+## 5. Открытие URL
+
+> ✅ **Рекомендуется: Chrome Custom Tabs**, а не WebView. Custom Tabs — это системный браузер, он безопаснее для прохождения модерации Google Play (нет встроенного веб-контейнера с гемблингом). WebView ниже — только если Custom Tabs не подходит под задачу. В обоих случаях НИКОГДА не добавляйте `addJavascriptInterface`/`evaluateJavascript`.
+>
+> ```kotlin
+> // Chrome Custom Tabs (предпочтительно)
+> val intent = androidx.browser.customtabs.CustomTabsIntent.Builder().build()
+> intent.launchUrl(context, android.net.Uri.parse(url))
+> ```
+> Зависимость: `implementation("androidx.browser:browser:1.8.0")`
+
+### WebView (альтернатива) — настройки
 
 ```kotlin
 webView.settings.apply {

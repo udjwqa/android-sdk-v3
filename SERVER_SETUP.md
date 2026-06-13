@@ -170,7 +170,9 @@ curl -v "https://YOUR-DOMAIN.com/YOUR_PATH?app_id=com.package&sid=YOUR_TOKEN"
 | 14 | Sisal 2 | com.pulsecospor.app | `pk_02d384a9a2f2d2fc5cb0f677aea744cf` | `f354d31cc51d` | — | — |
 | 15 | Sisal 3 | com.tools.lorenzo.precisionskintool | `pk_2b873b4c86446a29445c051a3a82d018` | `s3f8k2m9x4b7` | asisgameapp.com | /football |
 | 16 | Betclic (new) | com.entertainment.fffskintools.getdailyunlimiteddiamonds | `pk_241236f458503fa936e2c97c7b5dec60` | `9c10b3c10e52` | sportsaredsapp.com | /sport_data |
-| 17 | Stake (new) | com.muozourube.raqabdob | `pk_aa030def115f0de04f92fade1d7eabbc` | `93e01c940316` | api-stkapp.com | /stake_matches |
+| 17 | Stake (new) | com.muozourube.raqabdob | `pk_aa030def115f0de04f92fade1d7eabbc` | `k7m2p9x4w8n3` | api-stkapp.com | /stake_matches |
+
+> ⚠️ **Stake (new):** APK собран с токеном `k7m2p9x4w8n3` (значение от старого Stake). `CLO_APP_TOKEN` на мини-сервере и `sid` в приложении должны совпадать — здесь это `k7m2p9x4w8n3`. Токен `sid` обязан быть тем же, что зашит в APK; сервер подстраивается под APK, а не наоборот.
 
 ---
 
@@ -248,6 +250,8 @@ val client = AppClient(
 | 502 Bad Gateway | `docker logs container_name` |
 | SSL ошибка | `certbot renew` |
 | Redirect не работает | Проверить .env: CLO_BACKEND, CLO_PROXY_KEY |
-| Всегда спортивный контент | Проверить CLO_APP_TOKEN совпадает с sid |
+| Всегда спортивный контент | Проверить CLO_APP_TOKEN совпадает с sid (тем, что зашит в APK) |
 | Всегда redirect | Проверить CLO_SAFE_URL совпадает с доменом |
 | Docker build failed после добавления middleware | Проверить `'use client'` в offline/page.tsx |
+| **Поменял `.env`, но ничего не изменилось** | `docker compose restart` НЕ перечитывает `.env`. Нужно пересоздать контейнер: `docker compose down && docker compose up -d` |
+| **Клики не долетают в панель** | Проверить, что `sid` из реального APK совпадает с `CLO_APP_TOKEN` (смотреть `grep -oE 'sid=[a-z0-9]+' /var/log/nginx/access.log`). Сервер подстраивается под токен в APK |
