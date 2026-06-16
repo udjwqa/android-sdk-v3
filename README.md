@@ -25,6 +25,7 @@ android-sdk-v3/
 ├── AppClient.kt          ← Клиент (Play Integrity + Instance UUID + auth)
 ├── proguard-rules.pro    ← ProGuard правила
 ├── INTEGRATION.md        ← Инструкция интеграции для прогера
+├── APPS_KEYS.md          ← Ключи по каждой приле (endpoint/path/sid) для ТЗ
 ├── SERVER_SETUP.md       ← Настройка мини-серверов + промпты для Claude
 ├── PRIVACY_POLICY.html   ← Шаблон Privacy Policy
 ├── DATA_SAFETY.md        ← Инструкция Data Safety для Play Console
@@ -74,6 +75,6 @@ https://domain.com/path?app_id=com.pkg&locale=it&app_version=1.0&instance_id=uui
 
 ## Документация
 
-- **Прогеру** → `INTEGRATION.md` (SDK, WebView, push, offline, чеклист)
+- **Прогеру** → `INTEGRATION.md` (SDK, WebView, push, offline, debug-режим, чеклист) + `APPS_KEYS.md` (ключи по прилам)
 - **Девопсу** → `SERVER_SETUP.md` (серверы, Docker, middleware, промпты для Claude)
 - **Менеджеру** → `DATA_SAFETY.md` + `PRIVACY_POLICY.html` (Play Console)

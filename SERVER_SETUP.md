@@ -150,7 +150,29 @@ curl -v "https://YOUR-DOMAIN.com/YOUR_PATH?app_id=com.package&sid=YOUR_TOKEN"
 
 ---
 
+## Вариант Б — sidecar (сервер БЕЗ исходников Next / статический сайт)
+
+Если на сервере уже крутится Next.js **standalone-сборка без исходников** или **статический сайт** —
+`middleware.ts` добавить нельзя (нужна пересборка из исходников). Тогда ставим лёгкий **Node-sidecar**
+перед нужным путём. Логика 1:1 с middleware. Так подняты Betsson (`btsnfitapp.com`) и ViSao (`attlgameapp.com`).
+
+Схема: `nginx /PATH → sidecar :3101 → (SDK-запрос) clo /init → grey: 302 на оффер; white/не-SDK: проксирует на реальную страницу (Next :3000 или внутренний статик :8080)`.
+
+1. `apt install -y nodejs` (Node 20, через nodesource).
+2. `/opt/<app>-clo/clo-mw.js` — sidecar (читает query `app_id/sid/integrity_token/instance_id`, гейт `sid===CLO_APP_TOKEN`, зовёт `CLO_BACKEND/init` с `X-Proxy-Key/X-Integrity-Token/X-Instance-Id/X-Forwarded-For`, на grey `302` на url, иначе reverse-proxy на `NEXT_UPSTREAM`). Готовый файл — на серверах Betsson/ViSao (`/opt/betsson-clo/clo-mw.js`).
+3. `.env`: `CLO_BACKEND`, `CLO_PROXY_KEY`, `CLO_SAFE_URL`, `CLO_APP_TOKEN`, `NEXT_UPSTREAM`, `PORT=3101`.
+4. systemd-юнит `<app>-clo.service` → `enable --now`.
+5. Для **статики** добавить внутренний nginx `listen 127.0.0.1:8080; root /var/www/...; absolute_redirect off;` как `NEXT_UPSTREAM` (отдаёт белый лендинг).
+6. Публичный nginx: `location /PATH { proxy_pass http://127.0.0.1:3101; }` (+ XFF/Host заголовки).
+
+> ⚠️ Если путь статики редиректит `/page` → `/page/`, ставь `absolute_redirect off` и в APK укажи `path` со слэшем (`/game_total/`), иначе SDK на white получит кривой Location.
+
+---
+
 ## Конфигурация для всех приложений
+
+> ⚠️ **Таблица ниже может быть УСТАРЕВШЕЙ** (особенно `Auth Token`). Авторитетный источник ключей по
+> прилам клиента — **`APPS_KEYS.md`**. Источник истины по `sid` = `.env CLO_APP_TOKEN` живого мини-сервера.
 
 | # | Приложение | Package | Proxy Key | Auth Token (sid) | Домен | Path |
 |---|---|---|---|---|---|---|
