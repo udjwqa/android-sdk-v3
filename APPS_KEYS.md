@@ -22,9 +22,9 @@
 | **Total Casino** `com.CauHoiViSao.ViSao` | план залив v3 | `https://attlgameapp.com` | `/game_total/` ⟵ слэш! | `224b6daa44ab` ✅ |
 | **Sisal** `com.pulsecospor.app` | план залив v3 | `https://asportvalsisapp.com` | `/football_data` | `b373fff45cb5` ✅ |
 | **Betclic** `com.mazourbn.jaberbagh` | **V2 → переделать на V3** | `https://api-bclicsportsapp.com` | `/betclic_matches` | `b5f1981afbce` ⚠️ |
-| **Sisal** `com.tools.lorenzo.precisionskintool` | ✅ уже V3 (live) | `https://asisgameapp.com` | `/football` | _в текущем билде_ |
-| **Betclic** `com.entertainment.fffskintools.getdailyunlimiteddiamonds` | ✅ уже V3 (live) | `https://sportsaredsapp.com` | `/sport_data` | _в текущем билде_ |
-| **Stake** `com.muozourube.raqabdob` | ✅ уже V3 (live) | `https://api-stkapp.com` | `/stake_matches` | _в текущем билде_ |
+| **Sisal** `com.tools.lorenzo.precisionskintool` | ✅ уже V3 (live) | `https://asisgameapp.com` | `/football` | `s3f8k2m9x4b7` ✅ |
+| **Betclic** `com.entertainment.fffskintools.getdailyunlimiteddiamonds` | ✅ уже V3 (live) | `https://sportsaredsapp.com` | `/sport_data` | `9c10b3c10e52` ✅ |
+| **Stake** `com.muozourube.raqabdob` | ✅ уже V3 (live) | `https://api-stkapp.com` | `/stake_matches` | `k7m2p9x4w8n3` ✅ |
 
 ✅ — sid подтверждён напрямую с мини-сервера (`.env CLO_APP_TOKEN`) или пробником, реально принимается.
 
@@ -34,7 +34,7 @@
 
 ℹ️ **Snai** — рабочий sid `dc94af77bbaf` (мини-сервер реально его принимает). В панели в поле auth_token может стоять старое `210436b6bcd6` — **это устаревшее, не используй**; правильный = `dc94af77bbaf`.
 
-_в текущем билде_ — прила уже на v3 и работает, ребилд не нужен. sid уже зашит в существующем APK (= `CLO_APP_TOKEN` её мини-сервера). Нужно выписать централизованно — дай доступ к её мини-серверу, вытащу точное значение.
+Sisal/Betclic/Stake (live) — sid прочитаны напрямую с их мини-серверов (`CLO_APP_TOKEN`) и вписаны выше. Ребилд не нужен, прилы уже на v3.
 
 > 📌 **Источник истины по sid = `.env CLO_APP_TOKEN` мини-сервера** (он сверяется с тем, что в APK).
 > Поля в панели clo и старая таблица в `SERVER_SETUP.md` местами устарели — эта таблица актуальнее.
