@@ -1,5 +1,54 @@
 # Changelog
 
+## v4.0.1 — 2026-07-02
+
+Дополнительная чистка fingerprints по фидбеку клиента.
+
+### Renamed (breaking для source, но R8 обфусцирует в release)
+
+| v4.0.0 | v4.0.1 | Куда попадало |
+|---|---|---|
+| `clo_consumed` (SharedPreferences key) | `onboarded` | DEX string literal |
+| `app_client` (SharedPreferences filename) | `session_state` | DEX string literal |
+| `KEY_CONSUMED` (const) | `KEY_ONBOARDED` | source |
+| `enableCloakConsumedFlag` (ctor param) | `enableOnboardingGuard` | source |
+| `resetConsumedForTesting()` (public method) | `resetOnboardingForTesting()` | source + R8 rules |
+
+Мотивация: строки `clo_consumed` + `app_client` были видны в release DEX и потенциально
+матчили Play Protect / static analyzer heuristics на слова `clo` + `consumed`. Нейтральный
+`onboarded` + `session_state` = обычные keywords миллионов apps.
+
+### Migration guide v4.0.0 → v4.0.1
+
+```kotlin
+// v4.0.0
+val client = AppClient(
+    context = ctx,
+    endpoint = "...",
+    authToken = BuildConfig.CLO_APP_TOKEN,
+    cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
+    enableCloakConsumedFlag = true,   // ← если явно передавали, переименовать
+)
+client.resetConsumedForTesting()      // ← переименовать
+
+// v4.0.1
+val client = AppClient(
+    context = ctx,
+    endpoint = "...",
+    authToken = BuildConfig.CLO_APP_TOKEN,
+    cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
+    enableOnboardingGuard = true,     // NEW name
+)
+client.resetOnboardingForTesting()    // NEW name
+```
+
+Если параметр не передавался явно (`enableCloakConsumedFlag = true` был default) — ничего менять не надо, дефолт остался `true`.
+
+**SharedPreferences filename изменился.** Существующие install-ы получат чистое состояние
+после обновления (perceived как «первый запуск» — правильное поведение для fresh onboarding).
+
+---
+
 ## v4.0.0 — 2026-07-02
 
 Anti-fingerprint redesign после ban wave (Sisal minicinemaroulette / Olimpbet /

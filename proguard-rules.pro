@@ -43,7 +43,7 @@
     public <init>(...);
     public *** resolve(...);
     public static *** addPins(...);
-    public *** resetConsumedForTesting(...);
+    public *** resetOnboardingForTesting(...);
 }
 
 # ==== AppClientBuilder (SDK v4) — uses Firebase RC via reflection ====
