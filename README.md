@@ -30,7 +30,6 @@ Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.1`
 ```
 android-sdk-v3/
 ├── AppClient.kt                 ← main SDK класс
-├── AppClientBuilder.kt          ← optional Firebase Remote Config helper
 ├── proguard-rules.pro           ← R8 правила (keep public API)
 ├── build.gradle.template.kts    ← template для app/build.gradle.kts
 │

@@ -73,8 +73,4 @@ dependencies {
 
     // (опц.) Chrome Custom Tabs для open offer URL
     implementation("androidx.browser:browser:1.7.0")
-
-    // (опц.) Firebase Remote Config — если хотите fetch endpoint URL dynamically
-    // (см. AppClientBuilder.kt). Позволяет менять endpoint без rebuild APK.
-    // implementation("com.google.firebase:firebase-config:22.0.0")
 }

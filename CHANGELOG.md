@@ -87,9 +87,6 @@ Protect ML-classifier + static analyzer использует для детекц
 - **Standard Integrity token provider caching.** Process-wide cache через
   `Mutex.withLock` — `prepareIntegrityToken()` вызывается один раз, token
   requests много раз.
-- **`AppClientBuilder.fetchEndpointOrFallback`.** Optional helper для
-  получения endpoint URL из Firebase Remote Config через reflection (без
-  hard-dependency). Убирает hardcoded backend domain из DEX.
 
 ### Removed
 

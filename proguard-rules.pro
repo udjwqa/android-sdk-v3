@@ -46,14 +46,6 @@
     public *** resetOnboardingForTesting(...);
 }
 
-# ==== AppClientBuilder (SDK v4) — uses Firebase RC via reflection ====
--keep public class com.app.client.AppClientBuilder {
-    public static *** fetchEndpointOrFallback(...);
-}
-# NOTE: Firebase RC classes accessed via reflection — если Firebase не подключён,
-# reflection тихо fail-open. Никаких rules для com.google.firebase.remoteconfig.**
-# намеренно НЕТ, чтобы SDK не тянул Firebase as hard dep.
-
 # ==== ОБФУСКАЦИЯ + СОКРАЩЕНИЕ ====
 
 # Включить максимальную обфускацию (по умолчанию proguard-android-optimize)
