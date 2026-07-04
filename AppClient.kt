@@ -73,7 +73,7 @@ import kotlin.coroutines.resume
  *     context = applicationContext,
  *     endpoint = "https://your-mini-server.com",
  *     path = "/init",
- *     authToken = BuildConfig.CLO_APP_TOKEN,
+ *     authToken = BuildConfig.SERVICE_TOKEN,
  *     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
  * )
  *

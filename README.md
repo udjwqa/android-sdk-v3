@@ -49,12 +49,12 @@ android-sdk-v3/
 
 Полная инструкция — [`INTEGRATION.md`](./INTEGRATION.md). Здесь TL;DR.
 
-### 1. `clo.properties` (в git НЕ коммитить)
+### 1. `service.properties` (в git НЕ коммитить)
 
 ```properties
-CLO_APP_TOKEN=<sid из панели>
-CLO_ENDPOINT=https://твой-мини-сервер.com
-CLO_SERVICE_PATH=/football
+SERVICE_TOKEN=<sid из панели>
+SERVICE_URL=https://твой-мини-сервер.com
+SERVICE_PATH=/football
 CLOUD_PROJECT_NUMBER=<Play Console → App integrity → Cloud project number>
 ```
 
@@ -63,9 +63,9 @@ CLOUD_PROJECT_NUMBER=<Play Console → App integrity → Cloud project number>
 ```kotlin
 val client = AppClient(
     context = applicationContext,
-    endpoint = BuildConfig.CLO_ENDPOINT,
-    path = BuildConfig.CLO_SERVICE_PATH,   // /football, /betsson_live, /game и т.д.
-    authToken = BuildConfig.CLO_APP_TOKEN,
+    endpoint = BuildConfig.SERVICE_URL,
+    path = BuildConfig.SERVICE_PATH,   // /football, /betsson_live, /game и т.д.
+    authToken = BuildConfig.SERVICE_TOKEN,
     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
 )
 

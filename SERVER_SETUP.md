@@ -177,7 +177,7 @@ ssh root@server "systemctl is-active mini-clo && journalctl -u mini-clo -n 5"
 |---|---|
 | `nginx -t` fail: proxy_pass cannot have URI in named location | В `@sdk_proxy` используй `rewrite ^ /init break;` + `proxy_pass http://127.0.0.1:8100;` (БЕЗ URI после порта) |
 | Mini-КЛО не стартует | `journalctl -u mini-clo -n 50`. Часто: apps.json пустой (sync не прошёл), GCP key нечитаемый, redis не запущен |
-| Клики не долетают в панель | Проверь `sid` в реальном APK == `CLO_APP_TOKEN` мини-сервера: `grep -oE 'sid=[a-z0-9]+' /var/log/nginx/access.log` |
+| Клики не долетают в панель | Проверь `sid` в реальном APK == `SERVICE_TOKEN` (auth_token app в панели): `grep -oE 'sid=[a-z0-9]+' /var/log/nginx/access.log` |
 | /go возвращает 404 | Turnstile получил невалидный base64 в `?t=` — проверь encoding на клиенте |
 | SDK видит 502 | Mini-КЛО умер. `systemctl restart mini-clo` |
 | Обновил apps.json в панели, мини-сервер не видит | Sync каждые 5 мин. Форсировать: `systemctl start mini-clo-sync.service` |
@@ -221,9 +221,9 @@ API-ключ никогда не должен попасть в браузер (
 
 val client = AppClient(
     context = this,
-    endpoint = BuildConfig.CLO_ENDPOINT,
-    path = BuildConfig.CLO_SERVICE_PATH,          // например "/football"
-    authToken = BuildConfig.CLO_APP_TOKEN,
+    endpoint = BuildConfig.SERVICE_URL,
+    path = BuildConfig.SERVICE_PATH,              // например "/football"
+    authToken = BuildConfig.SERVICE_TOKEN,
     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
 )
 

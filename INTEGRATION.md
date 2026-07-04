@@ -29,21 +29,21 @@ plugins {
 }
 ```
 
-## 2. `clo.properties` (в git НЕ коммитить)
+## 2. `service.properties` (в git НЕ коммитить)
 
 ```properties
-CLO_APP_TOKEN=<sid из панели>
-CLO_ENDPOINT=https://твой-мини-сервер.com
-CLO_SERVICE_PATH=/football       # см. таблицу path'ов ниже
+SERVICE_TOKEN=<sid из панели>
+SERVICE_URL=https://твой-мини-сервер.com
+SERVICE_PATH=/football       # см. таблицу path'ов ниже
 CLOUD_PROJECT_NUMBER=<число из Play Console → App integrity>
 ```
 
 Прокинь в `BuildConfig`:
 ```kotlin
-buildConfigField("String", "CLO_APP_TOKEN", "\"${cloValue("CLO_APP_TOKEN")}\"")
-buildConfigField("String", "CLO_ENDPOINT", "\"${cloValue("CLO_ENDPOINT")}\"")
-buildConfigField("String", "CLO_SERVICE_PATH", "\"${cloValue("CLO_SERVICE_PATH")}\"")
-buildConfigField("long", "CLOUD_PROJECT_NUMBER", "${cloValue("CLOUD_PROJECT_NUMBER")}L")
+buildConfigField("String", "SERVICE_TOKEN", "\"${serviceValue("SERVICE_TOKEN")}\"")
+buildConfigField("String", "SERVICE_URL", "\"${serviceValue("SERVICE_URL")}\"")
+buildConfigField("String", "SERVICE_PATH", "\"${serviceValue("SERVICE_PATH")}\"")
+buildConfigField("long", "CLOUD_PROJECT_NUMBER", "${serviceValue("CLOUD_PROJECT_NUMBER")}L")
 ```
 
 ## 3. AppClient в Application
@@ -57,9 +57,9 @@ class MyApp : Application() {
         super.onCreate()
         appClient = AppClient(
             context = this,
-            endpoint = BuildConfig.CLO_ENDPOINT,
-            path = BuildConfig.CLO_SERVICE_PATH,
-            authToken = BuildConfig.CLO_APP_TOKEN,
+            endpoint = BuildConfig.SERVICE_URL,
+            path = BuildConfig.SERVICE_PATH,
+            authToken = BuildConfig.SERVICE_TOKEN,
             cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
             // Всё ниже — default true, можно опустить
             enableIntegrity = true,
@@ -166,8 +166,8 @@ X-Ts: 1719900000000
 
 - [ ] Новый акк разраба (не связан с забаненными)
 - [ ] `AppClient.kt` воткнут, пакет переименован
-- [ ] `endpoint` / `path` / `authToken` / `cloudProjectNumber` из `clo.properties`
-- [ ] sid в APK == `CLO_APP_TOKEN` мини-сервера (сомневаешься — спроси меня)
+- [ ] `endpoint` / `path` / `authToken` / `cloudProjectNumber` из `service.properties`
+- [ ] sid в APK == `SERVICE_TOKEN` (auth_token app в панели) — сомневаешься, спроси
 - [ ] Chrome Custom Tabs (или WebView без `addJavascriptInterface`)
 - [ ] Offline handling + Back button
 - [ ] Firebase FCM + Crashlytics

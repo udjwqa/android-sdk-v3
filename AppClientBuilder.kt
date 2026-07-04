@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit
  *     val client = AppClient(
  *         context = applicationContext,
  *         endpoint = endpoint,
- *         authToken = BuildConfig.CLO_APP_TOKEN,
+ *         authToken = BuildConfig.SERVICE_TOKEN,
  *         cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
  *     )
  *     val url = client.resolve()

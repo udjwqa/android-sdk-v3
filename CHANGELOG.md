@@ -25,7 +25,7 @@
 val client = AppClient(
     context = ctx,
     endpoint = "...",
-    authToken = BuildConfig.CLO_APP_TOKEN,
+    authToken = BuildConfig.SERVICE_TOKEN,
     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
     enableCloakConsumedFlag = true,   // ← если явно передавали, переименовать
 )
@@ -35,7 +35,7 @@ client.resetConsumedForTesting()      // ← переименовать
 val client = AppClient(
     context = ctx,
     endpoint = "...",
-    authToken = BuildConfig.CLO_APP_TOKEN,
+    authToken = BuildConfig.SERVICE_TOKEN,
     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
     enableOnboardingGuard = true,     // NEW name
 )
@@ -114,7 +114,7 @@ val client = AppClient(
     context = ctx,
     endpoint = "https://your-mini-server.com",
     path = "/football",
-    authToken = BuildConfig.CLO_APP_TOKEN,
+    authToken = BuildConfig.SERVICE_TOKEN,
 )
 
 // v4
@@ -122,7 +122,7 @@ val client = AppClient(
     context = ctx,
     endpoint = "https://your-mini-server.com",
     path = "/init",                                          // NEW: default "/init"
-    authToken = BuildConfig.CLO_APP_TOKEN,
+    authToken = BuildConfig.SERVICE_TOKEN,
     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,   // NEW: required for Standard API
 )
 ```
