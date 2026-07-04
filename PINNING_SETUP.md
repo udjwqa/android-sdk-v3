@@ -14,11 +14,11 @@ Wire protocol в v4 — **POST /init с headers**, но domain pinning рабо�
 
 ## Как собрать pin для домена
 
-Для каждого client домена (api-stkapp.com, sportsaredsapp.com, etc.):
+Для каждого мини-сервера (sisalfootballapp.com, bsonsportapp.com, supercastotalgame.com, totalsupergame.com, olimpcinemapp.com — или свой):
 
 ```bash
-# Primary pin (текущий cert)
-openssl s_client -servername api-stkapp.com -connect api-stkapp.com:443 < /dev/null 2>/dev/null \
+DOMAIN=свой-домен.com
+openssl s_client -servername $DOMAIN -connect $DOMAIN:443 < /dev/null 2>/dev/null \
   | openssl x509 -pubkey -noout \
   | openssl pkey -pubin -outform der \
   | openssl dgst -sha256 -binary \
@@ -30,13 +30,10 @@ openssl s_client -servername api-stkapp.com -connect api-stkapp.com:443 < /dev/n
 В `MyApp.onCreate` (вызывается ДО первого AppClient.resolve()):
 
 ```kotlin
-import com.app.client.AppClient
-
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        // F7: cert pinning. Pins из openssl команды выше.
-        AppClient.addPins("api-stkapp.com", listOf(
+        AppClient.addPins("свой-домен.com", listOf(
             "sha256/PRIMARY_PIN_FROM_OPENSSL=",
             "sha256/BACKUP_PIN_FROM_OPENSSL="
         ))

@@ -1,51 +1,52 @@
-# SDK v3 — Полная инструкция интеграции
+# SDK v4.0.1 — интеграция
 
-## Что это
-
-Лёгкий клиент — один класс, один файл, один запрос. Приложение открывает URL, сервер решает что показать. В APK нет ничего подозрительного.
+Тонкий клиент. Один класс, один POST, минимум палева. Прила стучится на свой мини-сервер, тот решает: показать оффер или спортивную заглушку.
 
 ---
 
 ## 1. Зависимости
 
-В `app/build.gradle.kts`:
+`app/build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.squareup.okhttp3:okhttp:5.3.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    
-    // Play Integrity (официальный Google API)
-    implementation("com.google.android.play:integrity:1.6.0")
-    
-    // Push-уведомления (обязательно для Google Play)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.android.play:integrity:1.4.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("androidx.browser:browser:1.7.0")
+
+    // Обязательно для прохождения модерации
     implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
     implementation("com.google.firebase:firebase-messaging")
-    
-    // Crashlytics (рекомендуется)
     implementation("com.google.firebase:firebase-crashlytics")
 }
 ```
 
-В корневом `build.gradle.kts`:
+Root `build.gradle.kts`:
 ```kotlin
 plugins {
     id("com.google.firebase.crashlytics") version "3.0.3" apply false
 }
 ```
 
-В `app/build.gradle.kts` plugins:
-```kotlin
-plugins {
-    id("com.google.firebase.crashlytics")
-}
+## 2. `clo.properties` (в git НЕ коммитить)
+
+```properties
+CLO_APP_TOKEN=<sid из панели>
+CLO_ENDPOINT=https://твой-мини-сервер.com
+CLO_SERVICE_PATH=/football       # см. таблицу path'ов ниже
+CLOUD_PROJECT_NUMBER=<число из Play Console → App integrity>
 ```
 
-## 2. Скопировать AppClient.kt
+Прокинь в `BuildConfig`:
+```kotlin
+buildConfigField("String", "CLO_APP_TOKEN", "\"${cloValue("CLO_APP_TOKEN")}\"")
+buildConfigField("String", "CLO_ENDPOINT", "\"${cloValue("CLO_ENDPOINT")}\"")
+buildConfigField("String", "CLO_SERVICE_PATH", "\"${cloValue("CLO_SERVICE_PATH")}\"")
+buildConfigField("long", "CLOUD_PROJECT_NUMBER", "${cloValue("CLOUD_PROJECT_NUMBER")}L")
+```
 
-Скопировать `AppClient.kt` в проект. Пакет можно переименовать.
-
-## 3. Инициализация в Application
+## 3. AppClient в Application
 
 ```kotlin
 class MyApp : Application() {
@@ -56,75 +57,53 @@ class MyApp : Application() {
         super.onCreate()
         appClient = AppClient(
             context = this,
-            endpoint = "https://YOUR-DOMAIN.com",   // Домен мини-сервера
-            path = "/football",                      // Путь к странице
-            authToken = "YOUR_SECRET_TOKEN",         // Секретный токен (из .env мини-сервера)
-            enableIntegrity = !BuildConfig.DEBUG,    // PI: выкл в debug, вкл в release
+            endpoint = BuildConfig.CLO_ENDPOINT,
+            path = BuildConfig.CLO_SERVICE_PATH,
+            authToken = BuildConfig.CLO_APP_TOKEN,
+            cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
+            // Всё ниже — default true, можно опустить
+            enableIntegrity = true,
+            enableTestLabGuard = true,
+            enableOnboardingGuard = true,
         )
     }
 }
 ```
 
-### Параметры:
+## 4. Path per прила (важно!)
 
-| Параметр | Описание | Обязательный |
-|---|---|---|
-| `context` | Application context | Да |
-| `endpoint` | URL мини-сервера (домен клиента) | Да |
-| `path` | Путь (default: `/football`) | Нет |
-| `authToken` | Секретный токен для авторизации | Да |
-| `enableIntegrity` | Включить Play Integrity | Нет (default: true) |
+Каждый мини-сервер имеет РОВНО ОДИН уникальный splitter path. Не /init, не /sports. Тот, который у тебя в nginx.
 
-> 🔑 **Ключи по конкретным прилам** (endpoint / path / authToken для каждого пакета) — в файле `APPS_KEYS.md`.
+| Прила | Path |
+|---|---|
+| Sisal Football | `/football` |
+| Betsson | `/betsson_live` |
+| Total Casino #1 | `/total_play` |
+| Total Casino #2 | `/game` |
+| Olimpbet | `/olimplay` |
 
-## 3.1 Debug / тест-режим (ВАЖНО — читать перед тестом)
+Если сомневаешься — спроси. Path зашит в APK, менять — пересборка.
 
-В debug-сборке `enableIntegrity = !BuildConfig.DEBUG` = **false** → SDK **не шлёт** Play Integrity токен.
-А сервер настроен на `require_integrity` → «нет токена» он трактует как провал проверки устройства и
-отдаёт **белую** (заглушечную) страницу. **Это не баг** — так и задумано: модератор/бот без валидного PI
-не должен видеть оффер.
-
-➡️ Поэтому в debug-сборке ты по умолчанию **всегда увидишь белую страницу**. Чтобы протестировать оффер
-на своём устройстве без PI — занеси себя во whitelist:
-
-1. Панель → **Настройки** → блок **«Debug / тест-режим»**.
-2. Впиши свой тестовый **IP** или **instance_id** (instance_id виден в деталях клика в дашборде).
-3. Сохрани → запросы с этого IP/instance идут в обычный скоринг и на чистом девайсе вернут оффер.
-4. **После теста очисти список.**
-
-⚠️ Никогда не выключай `require_integrity` на сервере ради теста — это открывает дыру для модераторов.
-Для теста используй только whitelist. В **release**-сборке `enableIntegrity` = `true` — PI работает штатно.
-
-## 4. Получение URL при запуске
+## 5. Получить URL
 
 ```kotlin
-// В ViewModel или coroutine scope
 lifecycleScope.launch {
     val url = (application as MyApp).appClient.resolve()
-    
     if (url.isNotEmpty()) {
-        // Серый или белый — решает сервер
-        webView.loadUrl(url)
+        // Открыть в Chrome Custom Tabs (НЕ WebView, если можно)
+        CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
     } else {
-        // Сервер недоступен → показать нативный контент
+        // Пусто = Test Lab / emulator / уже onboarded / net error → нативный контент
         showMainContent()
     }
 }
 ```
 
-## 5. Открытие URL
+## 6. Chrome Custom Tabs vs WebView
 
-> ✅ **Рекомендуется: Chrome Custom Tabs**, а не WebView. Custom Tabs — это системный браузер, он безопаснее для прохождения модерации Google Play (нет встроенного веб-контейнера с гемблингом). WebView ниже — только если Custom Tabs не подходит под задачу. В обоих случаях НИКОГДА не добавляйте `addJavascriptInterface`/`evaluateJavascript`.
->
-> ```kotlin
-> // Chrome Custom Tabs (предпочтительно)
-> val intent = androidx.browser.customtabs.CustomTabsIntent.Builder().build()
-> intent.launchUrl(context, android.net.Uri.parse(url))
-> ```
-> Зависимость: `implementation("androidx.browser:browser:1.8.0")`
+**Custom Tabs — предпочтительно.** Системный браузер, модерация проще.
 
-### WebView (альтернатива) — настройки
-
+WebView — только если без него никак:
 ```kotlin
 webView.settings.apply {
     javaScriptEnabled = true
@@ -132,142 +111,71 @@ webView.settings.apply {
     allowFileAccess = false
     mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
 }
-
-// ВАЖНО: НЕ ДОБАВЛЯТЬ addJavascriptInterface!
-// ВАЖНО: НЕ ДОБАВЛЯТЬ evaluateJavascript!
-
 webView.loadUrl(url)
 ```
 
-## 6. Offline Handling (ОБЯЗАТЕЛЬНО)
+❌ **НИКОГДА**: `addJavascriptInterface`, `evaluateJavascript` — палево.
 
-```kotlin
-webView.webViewClient = object : WebViewClient() {
-    override fun onReceivedError(
-        view: WebView?,
-        request: WebResourceRequest?,
-        error: WebResourceError?
-    ) {
-        if (request?.isForMainFrame == true) {
-            webView.visibility = View.GONE
-            offlineLayout.visibility = View.VISIBLE
-        }
-    }
-}
+## 7. Обязательное для модерации
+
+- **Offline handling**: `WebViewClient.onReceivedError` (main frame) → спрятать WebView, показать нативное «нет сети»
+- **Back**: `onBackPressedDispatcher` → `webView.goBack()` / `finish()`
+- **Push (FCM)**: `FirebaseMessagingService.onMessageReceived` + сервис в манифесте
+- **ProGuard**: `-dontwarn okhttp3.**` / `-dontwarn okio.**`
+- **Privacy Policy**: URL в Play Console + в приле (шаблон в `PRIVACY_POLICY.html`)
+
+## 8. Debug — в дебаге всегда белое
+
+`enableIntegrity` реагирует на `!BuildConfig.DEBUG`. В debug-сборке PI не шлётся → сервер видит "нет токена" → отдаёт safe_url (белую). **Это не баг.**
+
+Чтобы потестить оффер на дебаг-сборке:
+1. Панель → **Настройки** → **Debug / тест-режим**
+2. Впиши свой IP или instance_id (виден в дашборде клика)
+3. После теста — очисти список
+
+⚠️ Не проси выключить `require_integrity` на сервере ради теста — это открывает дыру. Только whitelist.
+
+## 9. Что уходит на сервер
+
+```http
+POST /football HTTP/1.1                    ← твой path
+Host: твой-мини-сервер.com
+Content-Type: application/octet-stream
+X-App-Id: com.твоя.пака
+X-Sid: <auth_token>
+X-Instance-Id: <UUID>
+X-Integrity-Token: eyJhbGci...
+X-App-Version: 1.0
+X-Locale: en
+X-Tz: Europe/Rome
+X-Ts: 1719900000000
 ```
 
-## 7. Навигация (ОБЯЗАТЕЛЬНО)
+Никаких `X-Proxy-Key` в APK! Он добавляется nginx-ом на мини-сервере.
 
-```kotlin
-// Back button
-onBackPressedDispatcher.addCallback {
-    if (webView.canGoBack()) {
-        webView.goBack()
-    } else {
-        finish()
-    }
-}
-```
+## 10. Что НЕЛЬЗЯ (палево = бан)
 
-## 8. Push-уведомления (ОБЯЗАТЕЛЬНО)
+- ❌ `addJavascriptInterface` / `evaluateJavascript`
+- ❌ Собирать GPU / codename / Build.MODEL / installed apps — это фингерпринтинг
+- ❌ Кастомные X-заголовки типа `X-Client-Secret`, `X-Device-Info`
+- ❌ `isEmulator()` / `isRooted()` в коде прилы
+- ❌ Хардкодить домен бэкенда в APK (только домен мини-сервера!)
+- ❌ Палевные строки в DEX: `cloak`, `casino`, `bet`, `verdict`
 
-```kotlin
-class MyFirebaseService : FirebaseMessagingService() {
-    override fun onMessageReceived(message: RemoteMessage) {
-        val title = message.notification?.title ?: "Update"
-        val body = message.notification?.body ?: ""
-        
-        val notification = NotificationCompat.Builder(this, "main")
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setAutoCancel(true)
-            .build()
-            
-        NotificationManagerCompat.from(this).notify(1, notification)
-    }
-}
-```
+## 11. Чеклист перед заливом
 
-AndroidManifest.xml:
-```xml
-<service android:name=".MyFirebaseService" android:exported="false">
-    <intent-filter>
-        <action android:name="com.google.firebase.MESSAGING_EVENT" />
-    </intent-filter>
-</service>
-```
-
-## 9. ProGuard
-
-```
--dontwarn okhttp3.**
--dontwarn okio.**
-```
+- [ ] Новый акк разраба (не связан с забаненными)
+- [ ] `AppClient.kt` воткнут, пакет переименован
+- [ ] `endpoint` / `path` / `authToken` / `cloudProjectNumber` из `clo.properties`
+- [ ] sid в APK == `CLO_APP_TOKEN` мини-сервера (сомневаешься — спроси меня)
+- [ ] Chrome Custom Tabs (или WebView без `addJavascriptInterface`)
+- [ ] Offline handling + Back button
+- [ ] Firebase FCM + Crashlytics
+- [ ] Privacy Policy + Data Safety (см. `DATA_SAFETY.md`)
+- [ ] ProGuard/R8 minified в release
+- [ ] targetSdk ≥ 35, HTTPS only
+- [ ] Pre-launch report в Play Console чистый
 
 ---
 
-## Что SDK передаёт серверу
-
-URL который приложение открывает выглядит так:
-```
-https://your-domain.com/football?app_id=com.package.name&locale=it&app_version=1.0.4&instance_id=uuid-xxx&sid=token&integrity_token=XYZ
-```
-
-| Параметр | Откуда | Зачем |
-|---|---|---|
-| `app_id` | `context.packageName` | Идентификация приложения |
-| `locale` | `Locale.getDefault().language` | Язык устройства |
-| `app_version` | `PackageInfo.versionName` | Версия сборки |
-| `instance_id` | UUID в SharedPreferences | Уникальный ID установки |
-| `sid` | `authToken` параметр | Авторизация |
-| `integrity_token` | Play Integrity API | Проверка устройства (опционально) |
-
-Всё это стандартные данные которые любое приложение может передавать.
-
----
-
-## Что НЕЛЬЗЯ делать
-
-- ❌ `addJavascriptInterface` — нарушение политики Google Play
-- ❌ `evaluateJavascript` — динамическая загрузка кода
-- ❌ Собирать GPU, codename, build product — фингерпринтинг
-- ❌ Кастомные X-заголовки (X-Client-Secret, X-Device-Info)
-- ❌ Проверки `isEmulator()`, `isRooted()` в коде приложения
-- ❌ Сканирование установленных приложений
-- ❌ Хардкодить домен бекенд-сервера (только домен мини-сервера)
-
----
-
-## Privacy Policy
-
-Используйте шаблон из файла `PRIVACY_POLICY.html`. Разместить:
-1. На домене: `https://your-domain.com/privacy`
-2. В Google Play Console → Store listing → Privacy Policy URL
-
-## Data Safety
-
-Подробная инструкция в файле `DATA_SAFETY.md`.
-
----
-
-## Чеклист перед заливкой
-
-| # | Пункт |
-|---|---|
-| 1 | Новый аккаунт разработчика (не связан с забаненными) |
-| 2 | SDK v3 интегрирован (AppClient.kt) |
-| 3 | Свой уникальный домен мини-сервера |
-| 4 | authToken прописан (из .env мини-сервера) |
-| 5 | `enableIntegrity = !BuildConfig.DEBUG` |
-| 6 | WebView БЕЗ addJavascriptInterface |
-| 7 | Push-уведомления (Firebase FCM) |
-| 8 | Crashlytics подключен |
-| 9 | Offline handling (WebView error → нативный контент) |
-| 10 | Back button навигация |
-| 11 | Privacy Policy (URL в Play Console + в приложении) |
-| 12 | Data Safety заполнен корректно |
-| 13 | Нет палевных строк в DEX (нет "casino", "bet", "verdict") |
-| 14 | HTTPS only |
-| 15 | targetSdk >= 35 |
-| 16 | Pre-launch report проверен в Play Console |
+Больше деталей: [`README.md`](./README.md), [`CHANGELOG.md`](./CHANGELOG.md), [`PINNING_SETUP.md`](./PINNING_SETUP.md).
