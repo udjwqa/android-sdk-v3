@@ -109,6 +109,7 @@ Play Protect / любой fuzz-сканер видит: этот sports app им
 | Total Casino #1 | `supercastotalgame.com` | `/total_play` |
 | Total Casino #2 | `totalsupergame.com` | `/game` |
 | Olimpbet | `olimpcinemapp.com` | `/olimplay` |
+| Snai | `footballapisnai.com` | `/sports` |
 
 Все другие пути → 404. **Это правильно** — sports app не имеет 20 endpoints.
 

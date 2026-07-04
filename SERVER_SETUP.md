@@ -44,6 +44,7 @@ Grey verdict URL идёт через **/go** на своём же мини-се�
 | Total Casino #1 | `supercastotalgame.com` | `/total_play` | 38.244.152.111 |
 | Total Casino #2 | `totalsupergame.com` | `/game` | 38.244.152.11 |
 | Olimpbet | `olimpcinemapp.com` | `/olimplay` | 149.33.0.240 |
+| Snai | `footballapisnai.com` | `/sports` | 149.33.29.82 |
 
 ---
 
