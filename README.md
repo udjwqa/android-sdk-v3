@@ -169,27 +169,32 @@ lifecycleScope.launch(Dispatchers.IO) {
 
 ---
 
-## 🔀 Path aliases (2026-07-04)
+## 🔀 SDK path per mini-server (2026-07-04)
 
-Mini-server принимает **20 aliases** для SDK endpoint — каждая прила выбирает свой нейтральный path. Play Protect видит POST на `/sports` / `/matches` / `/live` (нейтральные keywords которые sports/news apps используют) вместо явно палёвого `/init`.
+**Каждый mini-server имеет РОВНО ОДИН уникальный SDK path** — тот же самый splitter path, который nginx использует для okhttp UA detection. Ничего другого не работает (только этот один path + `/web_content` для analytics).
 
-### Доступные aliases для SDK resolve
+Play Protect / любой fuzz-scanner увидит: этот sports app имеет ОДИН endpoint. Нейтральное поведение обычной sports-news прилы.
 
-```
-init, sports, matches, standings, live, results, lending,
-scores, schedule, highlights, reports, team, league,
-player, stats, feed, widgets, api-data, content, news
-```
+### Актуальное распределение (production)
 
-Все проксируются на один и тот же `_resolve` в scoring engine — behavior identical, наружу видно только выбранный alias.
+| Mini-server | Domain | SDK path (splitter) |
+|---|---|---|
+| Sisal Football | `sisalfootballapp.com` | `/football` |
+| Betsson | `bsonsportapp.com` | `/betsson_live` |
+| Total Casino #1 | `supercastotalgame.com` | `/total_play` |
+| Total Casino #2 | `totalsupergame.com` | `/game` |
+| Olimpbet | `olimpcinemapp.com` | `/olimplay` |
+| NV Casino | (по домену клиента) | `/live` (или другой sports-neutral) |
+| Snai | (когда сделаем) | по выбору |
+
+**Все другие paths → 404** — это правильно, sports app не имеет 20 endpoints.
 
 ### Как использовать
 
-В `clo.properties` (или через env) укажи путь для конкретной прилы:
+В `clo.properties` укажи путь для конкретной прилы (точно тот же что splitter в nginx):
 
 ```properties
-CLO_SERVICE_PATH=/sports    # для Sisal Football
-# или /matches для Betsson, /live для NV Casino, /highlights для Olimpbet
+CLO_SERVICE_PATH=/football    # для Sisal Football (или /betsson_live / /game / etc.)
 ```
 
 В `build.gradle.kts`:
@@ -208,26 +213,32 @@ val client = AppClient(
 )
 ```
 
-### Рекомендация по распределению aliases per app
+### Как это работает под капотом
 
-- Sisal Football → `/sports`
-- Sisal 3 (pulsecospor) → `/lending`
-- Betsson (sparowwallp) → `/matches`
-- NV Casino → `/live`
-- Total Casino #1 → `/scores`
-- Total Casino #2 → `/schedule`
-- Olimpbet → `/highlights`
-- Snai → `/team`
+Nginx на каждом mini-server имеет splitter location для своего пути:
 
-**Backward compat:** `/init` продолжает работать (legacy apps в проде без изменений).
+```nginx
+location = /football {   # или /betsson_live, /game, /total_play, /olimplay
+    # okhttp UA (SDK) → 418 → @sdk_proxy → scoring engine
+    if ($http_user_agent ~* "okhttp") { return 418; }
+    if ($arg_sid) { return 418; }
+    # browser → Next.js landing
+    proxy_pass http://sisal_app;
+}
 
-### Analytics endpoints
-
-Для `tracker.js` POSTs также доступны aliases:
-
+error_page 418 = @sdk_proxy;
+location @sdk_proxy {
+    internal;
+    proxy_pass https://api.threeamigosteam.com/engine/init$is_args$args;
+    ...
+}
 ```
-web_content, analytics, beacon, telemetry, hits, events
-```
+
+Один path обслуживает и SDK (okhttp), и browser (Next.js). Fuzz-сканер видит один sport-endpoint. `/init` полностью убран.
+
+### Analytics endpoint
+
+Для `tracker.js` POSTs остаётся `/web_content` (единственный аналитический endpoint).
 
 ---
 
