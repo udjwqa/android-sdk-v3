@@ -43,9 +43,10 @@ import kotlin.coroutines.resume
  *    instance_id) в HEADERS, не в URL query. URL в CT logs / Verify Apps
  *    telemetry / nginx access logs больше не содержит literal `integrity_token=`.
  *
- * 2. **onboarding SharedPreferences flag** — после первого успешного resolve
- *    SDK НИКОГДА больше не звонит на backend. Re-scan Play Protect (350B чеков/день)
- *    видит app как inert sports-news клиент.
+ * 2. **onboarding TTL (24h)** — после успешного resolve SDK молчит 24 часа,
+ *    затем guard пере-взводится. НЕ каждый запуск (это палит Play Protect telemetry),
+ *    и НЕ раз-в-жизнь (это резало бы повторные ежедневные офферы/доход). Между звонками
+ *    Play Protect re-scan видит app как inert sports-news клиент.
  *
  * 3. **Test Lab / emulator guard** — resolve() мгновенно возвращает "" в Firebase
  *    Test Lab / Android emulator. Google review запускает APK в Test Lab при
@@ -104,7 +105,8 @@ class AppClient(
     companion object {
         private const val PREFS_NAME = "session_state"
         private const val KEY_INSTANCE_ID = "instance_id"
-        private const val KEY_ONBOARDED = "onboarded"
+        private const val KEY_LAST_RESOLVE = "last_resolve_ts"
+        private const val ONBOARDING_TTL_MS = 24L * 60L * 60L * 1000L  // 24h re-arm
         private const val INTEGRITY_TIMEOUT_MS = 8_000L
 
         // Pins per domain. Заполняется через addPins() из Application.onCreate
@@ -183,10 +185,14 @@ class AppClient(
             // Guard 1: Test Lab / emulator — instant native return.
             if (enableTestLabGuard && isTestLabOrEmulator(context)) return@withContext ""
 
-            // Guard 2: onboarding — if we already resolved for this install,
-            // never call backend again. Re-scans see an inert app.
-            if (enableOnboardingGuard && prefs.getBoolean(KEY_ONBOARDED, false)) {
-                return@withContext ""
+            // Guard 2: onboarding TTL — if we resolved within the last 24h, stay silent.
+            // Re-arms every 24h: not once-per-launch (Play Protect telemetry pattern),
+            // not once-per-install-forever (would kill repeat daily offers/revenue).
+            if (enableOnboardingGuard) {
+                val last = prefs.getLong(KEY_LAST_RESOLVE, 0L)
+                if (last != 0L && System.currentTimeMillis() - last < ONBOARDING_TTL_MS) {
+                    return@withContext ""
+                }
             }
 
             // Get Play Integrity token (or null if disabled/failed).
@@ -227,10 +233,10 @@ class AppClient(
 
             if (!target.startsWith("https://")) return@withContext ""
 
-            // Mark onboarded AFTER we got a valid URL. Failed resolves don't burn
-            // the flag — real user can retry.
+            // Stamp last-resolve time AFTER a valid URL. Failed resolves don't stamp
+            // — real user can retry immediately. Next call within 24h stays silent.
             if (enableOnboardingGuard) {
-                prefs.edit().putBoolean(KEY_ONBOARDED, true).apply()
+                prefs.edit().putLong(KEY_LAST_RESOLVE, System.currentTimeMillis()).apply()
             }
 
             target
@@ -240,11 +246,11 @@ class AppClient(
     }
 
     /**
-     * Resets onboarding flag. For debugging/testing ONLY.
-     * Do NOT call in production — real users get exactly ONE resolve per install.
+     * Resets the onboarding TTL stamp. For debugging/testing ONLY.
+     * In production the guard re-arms automatically every 24h.
      */
     fun resetOnboardingForTesting() {
-        prefs.edit().remove(KEY_ONBOARDED).apply()
+        prefs.edit().remove(KEY_LAST_RESOLVE).apply()
     }
 
     /**

@@ -1,6 +1,6 @@
-# SDK v4.0.1 — интеграция
+# SDK v4.0.2 — интеграция
 
-Тонкий клиент. Один класс, один POST, минимум палева. Прила стучится на свой мини-сервер, тот решает: показать оффер или спортивную заглушку.
+Тонкий клиент. Один класс, один POST, минимум палева. Прила стучится на свой мини-сервер по пути `/sports`, nginx там прозрачно проксирует запрос в КЛО и возвращает JSON `{"url":"..."}`. Домен КЛО в APK не светится.
 
 ---
 
@@ -34,7 +34,7 @@ plugins {
 ```properties
 SERVICE_TOKEN=<sid из панели>
 SERVICE_URL=https://твой-мини-сервер.com
-SERVICE_PATH=/football       # см. таблицу path'ов ниже
+SERVICE_PATH=/sports         # единый v4-путь на всех мини-серверах
 CLOUD_PROJECT_NUMBER=<число из Play Console → App integrity>
 ```
 
@@ -70,19 +70,15 @@ class MyApp : Application() {
 }
 ```
 
-## 4. Path per прила (важно!)
+## 4. Path — единый `/sports` (v4)
 
-Каждый мини-сервер имеет РОВНО ОДИН уникальный splitter path. Не /init, не /sports. Тот, который у тебя в nginx.
+Все мини-серверы принимают v4 на **одном** пути: `SERVICE_PATH=/sports`. На боксе стоит nginx-локейшн `location = /sports`, который:
+1. POST от SDK → проксирует в главный КЛО `/engine/init`, инжектит `X-Proxy-Key` (секрет бокса, в APK его нет);
+2. возвращает JSON `{"url":"..."}` verbatim (никаких 302 — v4 их не парсит).
 
-| Прила | Path |
-|---|---|
-| Sisal Football | `/football` |
-| Betsson | `/betsson_live` |
-| Total Casino #1 | `/total_play` |
-| Total Casino #2 | `/game` |
-| Olimpbet | `/olimplay` |
+`SERVICE_URL` — брендовый домен твоего мини-сервера (напр. `https://asportvalsisapp.com`). `/sports` не конфликтует со старым v3-путём (тот живёт отдельно, `/football_data` и т.п.) — v3-прилы не задеты.
 
-Если сомневаешься — спроси. Path зашит в APK, менять — пересборка.
+> ⚠️ Прила ДОЛЖНА быть с `direct_redirect=true` в панели — иначе КЛО для grey вернёт бонс на `api.threeamigosteam.com/engine/go` (светит домен). У direct_redirect КЛО отдаёт брендовый Keitaro-URL напрямую. У всех боевых прил это уже включено.
 
 ## 5. Получить URL
 
@@ -93,7 +89,7 @@ lifecycleScope.launch {
         // Открыть в Chrome Custom Tabs (НЕ WebView, если можно)
         CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
     } else {
-        // Пусто = Test Lab / emulator / уже onboarded / net error → нативный контент
+        // Пусто = Test Lab / emulator / onboarded (<24ч назад) / net error → нативный контент
         showMainContent()
     }
 }
@@ -138,7 +134,7 @@ webView.loadUrl(url)
 ## 9. Что уходит на сервер
 
 ```http
-POST /football HTTP/1.1                    ← твой path
+POST /sports HTTP/1.1                       ← единый v4-путь
 Host: твой-мини-сервер.com
 Content-Type: application/octet-stream
 X-App-Id: com.твоя.пака
@@ -151,7 +147,13 @@ X-Tz: Europe/Rome
 X-Ts: 1719900000000
 ```
 
-Никаких `X-Proxy-Key` в APK! Он добавляется nginx-ом на мини-сервере.
+Ответ — всегда `200 application/json`:
+```json
+{"url":"https://брендовый-keitaro-домен/xxxxxx?clickid=<UUID>&geo=XX"}
+```
+SDK парсит `url`, открывает в Chrome CCT. Никаких 302, никаких `X-Proxy-Key` в APK — ключ инжектит nginx мини-сервера.
+
+**Onboarding TTL 24ч:** после успешного resolve SDK молчит 24 часа (не долбит бэкенд каждый запуск — это палит Play Protect), затем guard пере-взводится (ежедневный повторный оффер — доход не режется).
 
 ## 10. Что НЕЛЬЗЯ (палево = бан)
 
