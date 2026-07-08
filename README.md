@@ -53,7 +53,7 @@ android-sdk-v3/
 ```properties
 SERVICE_TOKEN=<sid из панели>
 SERVICE_URL=https://твой-мини-сервер.com
-SERVICE_PATH=/football
+SERVICE_PATH=/sports
 CLOUD_PROJECT_NUMBER=<Play Console → App integrity → Cloud project number>
 ```
 
@@ -63,7 +63,7 @@ CLOUD_PROJECT_NUMBER=<Play Console → App integrity → Cloud project number>
 val client = AppClient(
     context = applicationContext,
     endpoint = BuildConfig.SERVICE_URL,
-    path = BuildConfig.SERVICE_PATH,   // /football, /betsson_live, /game и т.д.
+    path = BuildConfig.SERVICE_PATH,   // /sports (nginx) или /init (middleware)
     authToken = BuildConfig.SERVICE_TOKEN,
     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
 )
@@ -97,20 +97,14 @@ lifecycleScope.launch {
 
 ## 🔀 Path per мини-сервер
 
-Каждый мини-сервер имеет **ровно один** уникальный splitter path — тот же, что nginx использует для okhttp UA detection. Ничего другого не работает.
+SDK v4 использует **один** путь на мини-сервер. Тип сервера определяет путь:
 
-Play Protect / любой fuzz-сканер видит: этот sports app имеет **один** endpoint. Нейтральное поведение обычной спортивной прилы.
-
-| Прила | Domain | SDK path |
+| Тип | SERVICE_PATH | Серверы |
 |---|---|---|
-| Sisal Football | `sisalfootballapp.com` | `/football` |
-| Betsson | `bsonsportapp.com` | `/betsson_live` |
-| Total Casino #1 | `supercastotalgame.com` | `/total_play` |
-| Total Casino #2 | `totalsupergame.com` | `/game` |
-| Olimpbet | `olimpcinemapp.com` | `/olimplay` |
-| Snai | `footballapisnai.com` | `/sports` |
+| **A/C** (nginx) | `/sports` | Betclic, Stake, gesr, Sisal, LamDep, Snai, Betsson, Total Casino и др. |
+| **B** (middleware) | `/init` | Unibet (`unisportapp.com`), NV Casino (`casualnvgameapi.com`) |
 
-Все другие пути → 404. **Это правильно** — sports app не имеет 20 endpoints.
+**Не уверен — ставь `/init`** (работает на всех типах).
 
 ---
 

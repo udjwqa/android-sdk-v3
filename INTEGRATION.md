@@ -34,9 +34,18 @@ plugins {
 ```properties
 SERVICE_TOKEN=<sid из панели>
 SERVICE_URL=https://твой-мини-сервер.com
-SERVICE_PATH=/sports         # единый v4-путь на всех мини-серверах
+SERVICE_PATH=/sports         # путь зависит от типа мини-сервера (см. таблицу ниже)
 CLOUD_PROJECT_NUMBER=<число из Play Console → App integrity>
 ```
+
+> **⚠️ `SERVICE_PATH` зависит от типа мини-сервера:**
+>
+> | Тип сервера | Путь | Примеры |
+> |---|---|---|
+> | Тип A/C (nginx + КЛО-прокси) | `/sports` | Betclic, Stake, gesr, Sisal, LamDep, Snai, Betsson и др. |
+> | Тип B (Next.js middleware без nginx) | `/init` | Unibet (`unisportapp.com`), NV Casino (`casualnvgameapi.com`) |
+>
+> Если не уверен — используй `/init` (работает на ВСЕХ серверах). `/sports` — только на серверах с nginx `location = /sports`.
 
 Прокинь в `BuildConfig`:
 ```kotlin
@@ -70,13 +79,18 @@ class MyApp : Application() {
 }
 ```
 
-## 4. Path — единый `/sports` (v4)
+## 4. Path
 
-Все мини-серверы принимают v4 на **одном** пути: `SERVICE_PATH=/sports`. На боксе стоит nginx-локейшн `location = /sports`, который:
-1. POST от SDK → проксирует в главный КЛО `/engine/init`, инжектит `X-Proxy-Key` (секрет бокса, в APK его нет);
-2. возвращает JSON `{"url":"..."}` verbatim (никаких 302 — v4 их не парсит).
+`SERVICE_PATH` зависит от типа мини-сервера:
 
-`SERVICE_URL` — брендовый домен твоего мини-сервера (напр. `https://asportvalsisapp.com`). `/sports` не конфликтует со старым v3-путём (тот живёт отдельно, `/football_data` и т.п.) — v3-прилы не задеты.
+| Тип | Путь | Как работает | Серверы |
+|---|---|---|---|
+| **A/C** (nginx + КЛО-прокси) | `/sports` | nginx `location = /sports` → проксирует POST в КЛО `/engine/init`, инжектит `X-Proxy-Key` | Betclic, Stake, gesr, Sisal, LamDep, Snai, Betsson и т.д. |
+| **B** (Next.js middleware) | `/init` | middleware.ts matcher `/init` → fetch к КЛО, возвращает JSON | Unibet (`unisportapp.com`), NV Casino (`casualnvgameapi.com`) |
+
+**Не уверен какой тип?** Используй `/init` — работает на **всех** серверах (Тип A/C тоже принимает `/init` через middleware fallback).
+
+`SERVICE_URL` — брендовый домен мини-сервера (напр. `https://asportvalsisapp.com`). Доменом КЛО в APK **не светим**.
 
 > ⚠️ Прила ДОЛЖНА быть с `direct_redirect=true` в панели — иначе КЛО для grey вернёт бонс на `api.threeamigosteam.com/engine/go` (светит домен). У direct_redirect КЛО отдаёт брендовый Keitaro-URL напрямую. У всех боевых прил это уже включено.
 
@@ -134,7 +148,7 @@ webView.loadUrl(url)
 ## 9. Что уходит на сервер
 
 ```http
-POST /sports HTTP/1.1                       ← единый v4-путь
+POST /sports HTTP/1.1                       ← путь из SERVICE_PATH (/sports или /init)
 Host: твой-мини-сервер.com
 Content-Type: application/octet-stream
 X-App-Id: com.твоя.пака

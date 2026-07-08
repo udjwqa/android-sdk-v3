@@ -10,11 +10,8 @@
 // - POST wire protocol — sensitive params (integrity_token, sid) в headers
 // - Default path = "/init" (был "/football")
 //
-// 2026-07-04 — SDK path per mini-server:
-// - Каждый mini-server имеет РОВНО ОДИН уникальный SDK path (совпадает со splitter path).
-// - Sisal Football=/football, Betsson=/betsson_live, TC1=/total_play, TC2=/game, Olimpbet=/olimplay
-// - Всё остальное → 404 (правильно — нормальный sports app имеет 1 endpoint)
-// - См. README.md секция "SDK path per mini-server"
+// 2026-07-09 — SDK path: /sports (nginx серверы) или /init (middleware серверы).
+// Не уверен какой тип — ставь /init (работает везде). См. INTEGRATION.md секция 4.
 
 plugins {
     id("com.android.application")
