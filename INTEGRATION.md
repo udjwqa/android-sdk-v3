@@ -72,7 +72,6 @@ class MyApp : Application() {
             cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
             // Всё ниже — default true, можно опустить
             enableIntegrity = true,
-            enableTestLabGuard = true,
             enableOnboardingGuard = true,
         )
     }
@@ -103,7 +102,7 @@ lifecycleScope.launch {
         // Открыть в Chrome Custom Tabs (НЕ WebView, если можно)
         CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
     } else {
-        // Пусто = Test Lab / emulator / onboarded (<24ч назад) / net error → нативный контент
+        // Пусто = onboarded (<24ч назад) / net error → нативный контент
         showMainContent()
     }
 }

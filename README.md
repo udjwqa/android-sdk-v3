@@ -2,7 +2,7 @@
 
 Лёгкий Android клиент. Один класс, один POST, минимум палева в APK.
 
-POST протокол · headers-based auth · onboarding guard (one-shot) · Test Lab detection · Play Integrity Standard API.
+POST протокол · headers-based auth · onboarding guard (24h) · Play Integrity Standard API.
 
 Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.1`
 
@@ -73,7 +73,7 @@ lifecycleScope.launch {
     if (url.isNotEmpty()) {
         CustomTabsIntent.Builder().build().launchUrl(context, url.toUri())
     } else {
-        showNativeContent()  // Test Lab / emulator / onboarded / net error
+        showNativeContent()  // onboarded / net error
     }
 }
 ```
@@ -90,7 +90,6 @@ lifecycleScope.launch {
 | `authToken` | `""` | Sid — в header `X-Sid` |
 | `cloudProjectNumber` | `0L` | Play Console → App integrity. `0L` = skip PI |
 | `enableIntegrity` | `true` | Play Integrity Standard API |
-| `enableTestLabGuard` | `true` | Instant native return в Test Lab / emulator |
 | `enableOnboardingGuard` | `true` | После первого resolve SDK больше не звонит |
 
 ---
@@ -147,30 +146,12 @@ Content-Type: application/json
 
 **Impact:**
 - Real user получает grey URL 1 раз → Play Protect telemetry видит один outgoing request → не строит суспектный pattern
-- Google reviewer открывает APK → guard не активен (первый запуск) → либо Test Lab guard hits, либо scoring возвращает white → fallback native
+- Google reviewer открывает APK → guard не активен (первый запуск) → scoring возвращает white (integrity_missing) → fallback native
 - Verify Apps re-scan через дни → SDK видит `onboarded=true` → **inert app**, никаких network calls
 
 Combines с server-side onboarded SETNX (30-day TTL) на скоринге.
 
 Debug reset: `client.resetOnboardingForTesting()` (в prod НЕ вызывать).
-
----
-
-## 🛡️ Test Lab / emulator detection
-
-`resolve()` первым делом проверяет:
-
-```
-Settings.System.firebase.test.lab == "true"    → Firebase Test Lab
-Build.FINGERPRINT starts with "generic"        → Android emulator
-Build.FINGERPRINT contains "sdk_gphone"        → Play Store SDK image
-Build.MODEL contains "Emulator"                → Android emulator
-Build.MANUFACTURER == "Genymotion"             → Genymotion
-Build.HARDWARE in ("goldfish", "ranchu")       → x86/arm emulator
-Build.PRODUCT starts with "vbox"               → VirtualBox
-```
-
-Любой match → `resolve()` мгновенно возвращает `""`. Google review sandbox не видит трафик.
 
 ---
 
