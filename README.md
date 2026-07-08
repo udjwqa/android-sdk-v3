@@ -1,10 +1,10 @@
-# SDK v4.0.1 — тонкий клиент для server-driven routing
+# SDK v4.0.3 — тонкий клиент для server-driven routing
 
 Лёгкий Android клиент. Один класс, один POST, минимум палева в APK.
 
-POST протокол · headers-based auth · onboarding guard (24h) · Play Integrity Standard API.
+POST протокол · headers-based auth · onboarding guard (24h) · Play Integrity Standard API · **per-app path aligned с Digital Asset Links (DAL)**.
 
-Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.1`
+Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.3`
 
 ---
 
@@ -53,7 +53,7 @@ android-sdk-v3/
 ```properties
 SERVICE_TOKEN=<sid из панели>
 SERVICE_URL=https://твой-мини-сервер.com
-SERVICE_PATH=/sports
+SERVICE_PATH=/YOUR_DAL_PATH     # ровно как в assetlinks.json / URL лендинга
 CLOUD_PROJECT_NUMBER=<Play Console → App integrity → Cloud project number>
 ```
 
@@ -63,7 +63,7 @@ CLOUD_PROJECT_NUMBER=<Play Console → App integrity → Cloud project number>
 val client = AppClient(
     context = applicationContext,
     endpoint = BuildConfig.SERVICE_URL,
-    path = BuildConfig.SERVICE_PATH,   // /sports (nginx) или /init (middleware)
+    path = BuildConfig.SERVICE_PATH,   // ← path из assetlinks.json (per app)
     authToken = BuildConfig.SERVICE_TOKEN,
     cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
 )
@@ -94,16 +94,23 @@ lifecycleScope.launch {
 
 ---
 
-## 🔀 Path per мини-сервер
+## 🔀 Path per прила = DAL path
 
-SDK v4 использует **один** путь на мини-сервер. Тип сервера определяет путь:
+SDK v4.0.3+ использует **уникальный path на каждую прилу**, совпадающий с path в `/.well-known/assetlinks.json` на домене мини-сервера (= path её лендинга).
 
-| Тип | SERVICE_PATH | Серверы |
+Причина: Google Play Protect scanner кликает по URL из DAL для валидации. Если заявили `/foo` а SDK бьёт `/bar` → палево → бан.
+
+Примеры реальных прил (2026-07-09):
+
+| Прила | Лендинг URL | SERVICE_PATH |
 |---|---|---|
-| **A/C** (nginx) | `/sports` | Betclic, Stake, gesr, Sisal, LamDep, Snai, Betsson, Total Casino и др. |
-| **B** (middleware) | `/init` | Unibet (`unisportapp.com`), NV Casino (`casualnvgameapi.com`) |
+| Betsson `com.mzourobv.motocross` | `https://sportfootballapi.com/betsson_live` | `/betsson_live` |
+| Total Casino `com.ThaiCucQuyen.ThaiCucQuyenDuongSinh` | `https://supercastotalgame.com/total_play` | `/total_play` |
+| Total Casino `com.CauHoiViSao.ViSao` | `https://totalsupergame.com/game` | `/game` |
+| SNAI `com.calmheart.muslimazkarpro` | `https://footballapisnai.com/sports` | `/sports` |
+| Betsson `com.zourobnfsak.kodratak` | `https://sportapiplay.com/stats` | `/stats` |
 
-**Не уверен — ставь `/init`** (работает на всех типах).
+**Валидация:** панель КЛО → вкладка **«Пути / DAL»** → `DAL check` + `Health check`.
 
 ---
 
@@ -112,7 +119,7 @@ SDK v4 использует **один** путь на мини-сервер. Т
 **POST + headers** (v4). Никаких sensitive params в query string:
 
 ```http
-POST /football HTTP/1.1
+POST /<DAL_path> HTTP/1.1
 Host: свой-домен.com
 Content-Type: application/octet-stream
 X-App-Id: com.твоя.пака
@@ -157,10 +164,10 @@ Debug reset: `client.resetOnboardingForTesting()` (в prod НЕ вызывать
 
 ## 🏗️ Как это работает под капотом
 
-**Nginx на мини-сервере** — splitter location для своего пути:
+**Nginx на мини-сервере** — splitter location для DAL-path прилы:
 
 ```nginx
-location = /football {
+location = /betsson_live {           # ← ровно то, что в assetlinks.json
     # SDK (okhttp UA) → 418
     if ($http_user_agent ~* "okhttp") { return 418; }
     # sid в query → тоже 418
@@ -202,10 +209,10 @@ location @sdk_proxy {
 ## 🔗 Links
 
 - **Repo:** https://github.com/redzov/android-sdk-v3
-- **Latest tag:** [v4.0.1](https://github.com/redzov/android-sdk-v3/tree/v4.0.1)
+- **Latest tag:** [v4.0.3](https://github.com/redzov/android-sdk-v3/tree/v4.0.3)
 
 Clone:
 
 ```bash
-git clone --branch v4.0.1 https://github.com/redzov/android-sdk-v3.git
+git clone --branch v4.0.3 https://github.com/redzov/android-sdk-v3.git
 ```

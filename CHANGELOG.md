@@ -1,5 +1,49 @@
 # Changelog
 
+## v4.0.3 — 2026-07-09
+
+DAL-alignment: **per-app SDK path вместо унифицированного `/sports`**.
+
+### Что изменилось
+
+`SERVICE_PATH` теперь **обязан** совпадать с path в `assetlinks.json` на
+домене мини-сервера — и с path вашего лендинга. Google Play scanner
+кликает по URL из DAL для валидации. Если прила бьёт SDK POST на
+`/sports`, а в DAL заявлен `/betsson_live` — Google видит несоответствие
+«заявили одно, работает второе» → палево → бан.
+
+### Removed
+
+- Формулировка «Type A/C → `/sports`, Type B → `/init`». Это был мой
+  косяк в v4.0.1 (унификация). Правильно: **path per app == DAL path**.
+
+### Migration (только для прил, которые сейчас на `/sports` или `/init`)
+
+Открой `assetlinks.json` на домене мини-сервера. Смотри путь по
+которому Google кликает — он же есть у твоего лендинга:
+
+```
+https://sportfootballapi.com/betsson_live      ← DAL path = /betsson_live
+https://supercastotalgame.com/total_play       ← DAL path = /total_play
+https://footballapisnai.com/sports             ← DAL path = /sports (случайно совпал)
+```
+
+В `service.properties`:
+
+```
+SERVICE_PATH=/betsson_live     # ← ровно как в DAL, НЕ /sports, НЕ /init
+```
+
+На мини-сервере (SSH → nginx) должен быть `location = /<этот_path>` — обычно
+уже есть (это тот же путь, откуда лендинг отдаётся браузеру). Если нет —
+попроси devops добавить (nginx auto-splits по okhttp UA).
+
+**Валидация в панели КЛО**: вкладка «Пути / DAL» — кнопки `DAL check`
+(тянет assetlinks.json + сверяет SHA-256 + GET-ит path) и `Health check`
+(POST на path с фейковыми SDK headers). Всё зелёное = готово к релизу.
+
+---
+
 ## v4.0.1 — 2026-07-02
 
 Дополнительная чистка fingerprints по фидбеку клиента.
