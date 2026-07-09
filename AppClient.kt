@@ -36,7 +36,7 @@ class AppClient(
     private val authToken: String = "",
     private val cloudProjectNumber: Long = 0L,
     private val enableIntegrity: Boolean = true,
-    private val enableOnboardingGuard: Boolean = true,
+    private val enableOnboardingGuard: Boolean = false,
 ) {
     companion object {
         private const val PREFS_NAME = "session_state"

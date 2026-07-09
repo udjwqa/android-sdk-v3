@@ -1,10 +1,10 @@
-# SDK v4.0.3 — тонкий клиент для server-driven routing
+# SDK v4.0.4 — тонкий клиент для server-driven routing
 
 Лёгкий Android клиент. Один класс, один POST, минимум палева в APK.
 
-POST протокол · headers-based auth · onboarding guard (24h) · Play Integrity Standard API · **per-app path aligned с Digital Asset Links (DAL)**.
+POST протокол · headers-based auth · Play Integrity Standard API · **per-app path aligned с Digital Asset Links (DAL)** · onboarding guard off by default (max conversion mode).
 
-Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.3`
+Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.4`
 
 ---
 
@@ -90,7 +90,7 @@ lifecycleScope.launch {
 | `authToken` | `""` | Sid — в header `X-Sid` |
 | `cloudProjectNumber` | `0L` | Play Console → App integrity. `0L` = skip PI |
 | `enableIntegrity` | `true` | Play Integrity Standard API |
-| `enableOnboardingGuard` | `true` | После первого resolve SDK больше не звонит |
+| `enableOnboardingGuard` | `false` | Если `true` — после первого успешного resolve SDK молчит 24h. С v4.0.4 default `false` (максимальный конверт) |
 
 ---
 
