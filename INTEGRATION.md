@@ -79,7 +79,6 @@ class MyApp : Application() {
             authToken = BuildConfig.SERVICE_TOKEN,
             cloudProjectNumber = BuildConfig.CLOUD_PROJECT_NUMBER,
             // enableIntegrity default true (можно опустить)
-            // enableOnboardingGuard default false с v4.0.4 — юзер сразу получает оффер при каждом запуске
         )
     }
 }
@@ -174,7 +173,7 @@ X-Ts: 1719900000000
 ```
 SDK парсит `url`, открывает в Chrome CCT. Никаких 302, никаких `X-Proxy-Key` в APK — ключ инжектит nginx мини-сервера.
 
-**Onboarding guard (default off с v4.0.4):** SDK делает свежий resolve при каждом запуске → юзер всегда получает актуальный оффер. Trade-off: Play Protect быстрее детектит cloak-паттерн (LTV прилы ~2-4 нед. вместо 3-6 мес.). Если для конкретной прилы нужен долгожитель — явно передать `enableOnboardingGuard = true` в конструктор (24h TTL после первого успешного grey resolve).
+**Каждый запуск = свежий resolve.** SDK стучится на бэкенд при каждом старте прилы → юзер, вернувшийся после ставки, снова получает актуальный оффер. Trade-off: Play Protect быстрее детектит cloak-паттерн — LTV прилы ~2-4 нед. вместо 3-6 мес. с TTL. Клиентское решение в v4.0.5 — максимальный конверт.
 
 ## 10. Что НЕЛЬЗЯ (палево = бан)
 

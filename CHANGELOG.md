@@ -1,5 +1,23 @@
 # Changelog
 
+## v4.0.5 — 2026-07-09
+
+Onboarding guard **полностью удалён**.
+
+### Что изменилось
+
+Убран мёртвый код: параметр `enableOnboardingGuard`, константы `KEY_LAST_RESOLVE` / `ONBOARDING_TTL_MS`, оба `if (enableOnboardingGuard) { ... }` блока в `resolve()`, метод `resetOnboardingForTesting()`.
+
+В v4.0.4 default был выставлен в `false`, но константа `ONBOARDING_TTL_MS = 24h` осталась в коде — визуально противоречиво. Теперь нет никакого TTL нигде: **каждый запуск прилы = свежий POST → свежий оффер**.
+
+### Migration
+
+Просто пересобрать APK с v4.0.5. Если в приле явно передавался `enableOnboardingGuard = true` / `false` — убрать эту строку (параметр больше не существует).
+
+Server-side — без изменений.
+
+---
+
 ## v4.0.4 — 2026-07-09
 
 Onboarding guard **off by default** (max conversion mode).

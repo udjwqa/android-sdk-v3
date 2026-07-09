@@ -36,13 +36,10 @@ class AppClient(
     private val authToken: String = "",
     private val cloudProjectNumber: Long = 0L,
     private val enableIntegrity: Boolean = true,
-    private val enableOnboardingGuard: Boolean = false,
 ) {
     companion object {
         private const val PREFS_NAME = "session_state"
         private const val KEY_INSTANCE_ID = "instance_id"
-        private const val KEY_LAST_RESOLVE = "last_resolve_ts"
-        private const val ONBOARDING_TTL_MS = 24L * 60L * 60L * 1000L
         private const val INTEGRITY_TIMEOUT_MS = 8_000L
 
         private val NETWORK_PINS = mutableMapOf<String, List<String>>()
@@ -102,13 +99,6 @@ class AppClient(
     /** Returns content URL or empty string. Caller shows native UI on empty. */
     suspend fun resolve(): String = withContext(Dispatchers.IO) {
         try {
-            if (enableOnboardingGuard) {
-                val last = prefs.getLong(KEY_LAST_RESOLVE, 0L)
-                if (last != 0L && System.currentTimeMillis() - last < ONBOARDING_TTL_MS) {
-                    return@withContext ""
-                }
-            }
-
             val token = if (enableIntegrity) requestIntegrityToken() else null
 
             val url = endpoint.toHttpUrl().newBuilder()
@@ -142,19 +132,10 @@ class AppClient(
 
             if (!target.startsWith("https://")) return@withContext ""
 
-            if (enableOnboardingGuard) {
-                prefs.edit().putLong(KEY_LAST_RESOLVE, System.currentTimeMillis()).apply()
-            }
-
             target
         } catch (_: Exception) {
             ""
         }
-    }
-
-    /** Resets TTL stamp. Debug only. */
-    fun resetOnboardingForTesting() {
-        prefs.edit().remove(KEY_LAST_RESOLVE).apply()
     }
 
     private suspend fun requestIntegrityToken(): String? {
