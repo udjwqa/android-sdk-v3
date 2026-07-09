@@ -230,7 +230,7 @@ val client = AppClient(
 
 6. Если resolve() вернул URL → открыть через Chrome Custom Tabs (НЕ WebView)
 7. Если resolve() вернул "" → показать нативный контент
-8. Firebase: Crashlytics + Analytics + FCM push
+8. Firebase: Crashlytics (опционально — для нативных crash reports)
 9. Offline: ConnectivityObserver, OfflineHomeScreen
 10. Навигация: Jetpack Navigation Compose
 11. ProGuard/R8 minified в release

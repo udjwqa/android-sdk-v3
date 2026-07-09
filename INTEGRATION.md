@@ -15,9 +15,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.browser:browser:1.7.0")
 
-    // Обязательно для прохождения модерации
+    // Crashlytics — опционально, помогает пройти модерацию (native crash reports)
     implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
-    implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-crashlytics")
 }
 ```
@@ -140,7 +139,6 @@ webView.loadUrl(url)
 
 - **Offline handling**: `WebViewClient.onReceivedError` (main frame) → спрятать WebView, показать нативное «нет сети»
 - **Back**: `onBackPressedDispatcher` → `webView.goBack()` / `finish()`
-- **Push (FCM)**: `FirebaseMessagingService.onMessageReceived` + сервис в манифесте
 - **ProGuard**: `-dontwarn okhttp3.**` / `-dontwarn okio.**`
 - **Privacy Policy**: URL в Play Console + в приле (шаблон в `PRIVACY_POLICY.html`)
 
@@ -196,7 +194,6 @@ SDK парсит `url`, открывает в Chrome CCT. Никаких 302, н
 - [ ] sid в APK == `SERVICE_TOKEN` (auth_token app в панели) — сомневаешься, спроси
 - [ ] Chrome Custom Tabs (или WebView без `addJavascriptInterface`)
 - [ ] Offline handling + Back button
-- [ ] Firebase FCM + Crashlytics
 - [ ] Privacy Policy + Data Safety (см. `DATA_SAFETY.md`)
 - [ ] ProGuard/R8 minified в release
 - [ ] targetSdk ≥ 35, HTTPS only
